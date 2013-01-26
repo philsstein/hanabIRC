@@ -183,6 +183,9 @@ class Game(object):
         return retVal
 
     def add_player(self, nick):
+        if self.playing:
+            return ['Game %s already started.' % self.markup.bold(self.name)]
+
         retVal = list()
         if len(self.players) >= self.max_players:
             retVal.append('max players already in game %s. You can start'
@@ -205,7 +208,7 @@ class Game(object):
         for p in self.players:
             if p.name == nick:
                 retVal.append('Putting %s\'s cards back in the'
-                              'deck and reshuffling.' % (p.name))
+                              ' deck and reshuffling.' % (p.name))
                 self.deck += p.hand
                 random.shuffle(self.deck)
                 retVal.append('Removing %s from game %s' % (p.name, self.name))
@@ -220,7 +223,7 @@ class Game(object):
         else:
             return ['There are not enough players in the game, not starting.']
 
-        return ['Game %s started!' % self.name]
+        return ['Game %s started!' % self.markup.bold(self.name)]
 
 if __name__ == "__main__":
     import doctest
