@@ -33,6 +33,8 @@ class Hanabot(SingleServerIRCBot):
 
         self.markup = irc_markup()
 
+        self._game_ids = self._game_name_generator()
+
     # lib IRC callbacks
     #############################################################
 
@@ -81,20 +83,19 @@ class Hanabot(SingleServerIRCBot):
             for chname, chobj in self.channels.items():
                 if nick in chobj.opers():
                     if cmds[0] == 'die':
-                        self.die('Seppuku Complete')
+                        self.die('Seppuku successful')
                     elif cmds[0] == 'show':
                         for name, g in self.games.iteritems():
                             log.debug('Showing state for game %s', name)
                             for l in g.show_game_state():
                                 self.connection.notice(nick, l)
-
                     return
 
         # user commands
         if not cmds[0] in self.commands:
             self.connection.notice(nick, 'My dearest brother Willis, I do not'
-                                   'understand this "%s" of which you speak.' %
-                                   ' '.join(cmds))
+                                   ' understand this "%s" of which you speak.'
+                                   % ' '.join(cmds))
             return
 
         # call the appropriate handle_* function.
@@ -135,8 +136,7 @@ class Hanabot(SingleServerIRCBot):
         game_name = None if len(args) == 0 else args[0]
         nick = event.source.nick
         if not game_name:
-            game_name = ''.join(random.choice(string.lowercase)
-                                for i in range(8))
+            game_name = self._game_ids.next()
 
         if game_name in self.games.keys():
             self.connection.notice(nick, 'The game %s already exists.' %
@@ -208,7 +208,7 @@ class Hanabot(SingleServerIRCBot):
             self.connection.notice(nick, err_mess)
             return
 
-        try: 
+        try:
             from_slot = int(args[0])
             to_slot = int(args[1])
         except ValueError:
@@ -237,7 +237,9 @@ class Hanabot(SingleServerIRCBot):
         if not game:
             return
 
-        game.start_game()
+        for l in game.start_game():
+            self.connection.notice(self.channel, 'Game %s started!' %
+                                   (self.markup.bold(game.name)))
 
     def handle_stop(self, args, event):
         log.debug('got stop event')
@@ -247,25 +249,57 @@ class Hanabot(SingleServerIRCBot):
         if not game:
             return
 
-        game.stop_game()
+        for l in game.stop_game():
+            self.connection.notice(self.channel, l)
 
     def _get_game(self, name, nick):
         '''Given the name, find the referenced game. The name can be None
         in which case the first game is returned. If there are no games,
         None is returned. On error, a notice is sent to nick.'''
-        g = None
-        if len(self.games):
-            if not name and len(self.games) == 1:
-                # grab the first and only game
-                g = self.games[self.games.keys()[0]]
-            elif name in self.games:
-                g = self.games[name]
 
-        if name and not g:
-            self.connection.notice(nick, 'No such game %s' %
-                                   self.markup.bold(name))
-        elif not g:
-            self.connection.notice(nick, 'No active games. Start a new game '
-                                   'with !new [name].')
+        # the cases:
+        #   no games: fail no games running.
+        #   no name given and only one game, return game else fail 'more
+        #       than one game'
+        #   name given: if found return game, else fail 'that game not found'
+        if len(self.games) == 0:
+            self.connection.notice(nick, 'No games available. Start a one with'
+                                   ' !new [gameID]')
+            return None
 
-        return g
+        if not name:
+            if len(self.games) == 1:
+                return self.games[self.games.keys()[0]]
+            else:
+                self.connection.notice(nick, 'More than one active game, '
+                                       'specify which with the gameID')
+                return None
+
+        # at this point we know name is not None
+        if name in self.games:
+            return self.games[name]
+        else:
+            self.connection.notice(nick, 'GameID %s not found.' %
+                                   (self.markup.bold(name)))
+            return None
+
+    def _game_name_generator(self):
+        # GTL TODO: make this into a pool instead of just a generator
+        names = ['buffy', 'xander', 'willow', 'tara', 'anyanka', 'spike',
+                 'giles', 'angel', 'mal', 'wash', 'simon', 'kaylee', 'zoe',
+                 'river', 'book', 'inara', 'jayne', 'cordelia', 'oz', 'anya',
+                 'dawn', 'the_master', 'drusilla', 'darla', 'the_mayor', 
+                 'adam', 'glory', 'joyce', 'jenny', 'wesley', 'harmony', 
+                 'kendra', 'olive', 'maisie']
+
+        i = 0
+        while True:
+            random.shuffle(names)
+            for n in names:
+                if i == 0:
+                    yield n
+                else:
+                    yield '%s_%d' % (n, i)
+            else:
+                i += 1
+
