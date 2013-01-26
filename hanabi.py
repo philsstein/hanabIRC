@@ -100,7 +100,7 @@ class Game(object):
         >>> g.add_player('Maisie')
         ['Maisie has joined game foobar']
         >>> g.start_game()
-        ['Game foobar started!']
+        ['Game FOOBAR started!']
         >>> for l in g.get_status('Olive'): print l     # doctest: +ELLIPSIS
          --- Game: FOOBAR ---
         OLIVE: ?????, MAISIE: ...
@@ -121,7 +121,7 @@ class Game(object):
             for abstracting markup to support mulitple bolding and colorizing
             contexts, like IRC and xterms.
         '''
-        self.players = []
+        self.players = {}
         self.max_players = 5
         self.name = name
         self.markup = markup
@@ -133,38 +133,102 @@ class Game(object):
         self.deck = [Card(c, n, self.markup) for c in colors
                      for n in [1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5]]
         random.shuffle(self.deck)
+        self._playing = False
+
+        # table is a dict of lists of cards, indexed by color or use.
+        self.table = {}
+        for c in colors:
+            self.table[c] = list()     # list of cards.
+
+        self.discards = list()     # list of Cards
 
     def in_game(self, nick):
-        for p in self.players:
-            if p.name == nick:
-                return True
+        return nick in self.players
 
-        return False
+    def _flip(self, tokens, A, B):
+        '''flipthe first non A char token to the B token char. Return True
+        if no tokens found, False otherwise.'''
+        for i in xrange(len(tokens)):
+            if tokens[i] == A:
+                tokens[i] = B
+                return False
+
+        return True
+
+    def _end_game(self):
+        return ['The game is over.']
+
+    def _is_valid_play(self, c):
+        if not len(self.table[c.color]):
+            if c.number == 1:
+                return True
+            else:
+                return False
+        else:
+            # if card is one greater than last number in color group
+            if self.table[c.color][-1].number + 1 == c.number:
+                return True
+            else:
+                return False
+
+    def play_card(self, nick, i):
+        '''Have player "nick" play card in slot N from his/her hand.
+        "i" is indexed by 1 (slot number) and must be between 1 and 5.'''
+        if not nick in self.players:
+            return ['You are not in game %s.' % self.markup.bold(self.name)]
+
+        c = self.players[nick].hand.pop(i-1)
+        retVal = []
+        end_game = False
+        if self._is_valid_play(c):
+            self.table[c.color].append(c)
+            self.table[c.color].sort()   # GTL this is not really needed.
+            retVal.append('%s successfully added %s to the %s group.' %
+                          (nick, str(c), c.color))
+        else:
+            retVal.append('%s guessed wrong with %s! One storm token '
+                          'flipped!' % (nick, str(c)))
+            end_game = self._flip(self.storms, 'O', 'X')
+            self.discards.append(c)
+
+        if not len(self.deck) or end_game:
+            retVal += self._end_game()
+        else:
+            retVal.append('%s drew a new card from the deck.' % nick)
+            self.players[nick].hand.append(self.deck.pop())
+
+        return retVal
 
     def move_card(self, nick, A, B):
         '''In nick's hand, move card from A to B slot. Assumes
         input is valid: 1 <= A,B <= 5. So caller should cleanse input.'''
-        for p in self.players:
-            if p.name == nick:
-                return p.move_card(A, B)
+        if not nick in self.players:
+            return ['You are not in game %s.' % self.markup.bold(self.name)]
+
+        return self.players[nick].move_card(A, B)
 
     def get_status(self, nick, show_all=False):
         '''Return game status for player, masking that player's cards.'''
         retVal = [' --- Game: %s ---' % self.markup.bold(self.name)]
-        players = []
-        for p in self.players:
+        status = []
+        for p in self.players.values():
             if show_all:
-                players.append(p.get_hand())
+                status.append(p.get_hand())
             else:
                 if p.name != nick:
-                    players.append(p.get_hand())
+                    status.append(p.get_hand())
                 else:
-                    players.append(p.get_hand(hidden=True))
+                    status.append(p.get_hand(hidden=True))
 
-        retVal.append('%s' % ', '.join(players))
+        retVal.append('%s' % ', '.join(status))
+        cards = self.table.values()
+        retVal.append('Table: %s' % ', '.join([''.join([str(card) for card in cards])]))
         retVal.append('Notes: %s, Storms: %s, %d cards remaining.' %
                       (''.join(self.notes), ''.join(self.storms),
                        len(self.deck)))
+        if len(self.discards):
+            retVal.append('Top discard: %s. (size is %d)' %
+                          (str(self.discards[-1]), len(self.discards)))
 
         return retVal
 
@@ -173,7 +237,8 @@ class Game(object):
         debugging/super user/non-players.'''
         retVal = list()
         if len(self.players):
-            retVal += self.get_status(self.players[0].name, show_all=True)
+            retVal += self.get_status(
+                self.players[self.players.keys()[0]].name, show_all=True)
         else:
             retVal.append(' --- Game %s is waiting for players to join --- ' %
                           self.markup.bold(self.name))
@@ -183,7 +248,7 @@ class Game(object):
         return retVal
 
     def add_player(self, nick):
-        if self.playing:
+        if self._playing:
             return ['Game %s already started.' % self.markup.bold(self.name)]
 
         retVal = list()
@@ -191,35 +256,34 @@ class Game(object):
             retVal.append('max players already in game %s. You can start'
                           ' another with !new [name]' % self.name)
         else:
-            for p in self.players:
-                if p.name == nick:
-                    retVal.append('You are already in game %s' % self.name)
-                    break  # do not do else clause
+            if nick in self.players:
+                retVal.append('You are already in game %s' % self.name)
             else:
                 hand = self.deck[:5]
                 self.deck = self.deck[5:]
-                self.players.append(Player(nick, hand, self.markup))
+                self.players[nick] = Player(nick, hand, self.markup)
                 retVal.append('%s has joined game %s' % (nick, self.name))
 
         return retVal
 
     def remove_player(self, nick):
+        if not nick in self.players:
+            return ['You are not in game %s' % self.markup.bold(self.name)]
+
         retVal = []
-        for p in self.players:
-            if p.name == nick:
-                retVal.append('Putting %s\'s cards back in the'
-                              ' deck and reshuffling.' % (p.name))
-                self.deck += p.hand
-                random.shuffle(self.deck)
-                retVal.append('Removing %s from game %s' % (p.name, self.name))
-                self.players = [p for p in self.players if p.name != nick]
-                break
+        retVal.append('Putting %s\'s cards back in the'
+                      ' deck and reshuffling.' % nick)
+        self.deck += self.players[nick].hand
+        random.shuffle(self.deck)
+        retVal.append('Removing %s from game %s' %
+                      (self.players[nick].name, self.name))
+        self.players = [p for p in self.players if p.name != nick]
 
         return retVal
 
     def start_game(self):
         if len(self.players) > 1:
-            self.playing = True
+            self._playing = True
         else:
             return ['There are not enough players in the game, not starting.']
 

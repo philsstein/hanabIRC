@@ -25,7 +25,7 @@ class Hanabot(SingleServerIRCBot):
 
         # valid bot commands
         self.commands = ['status', 'start', 'stop', 'join', 'new', 'leave',
-                         'move']
+                         'move', 'help', 'play', 'tell']
         self.admin_commands = ['die', 'show']
 
         # name ---> Game object dict
@@ -83,7 +83,7 @@ class Hanabot(SingleServerIRCBot):
             for chname, chobj in self.channels.items():
                 if nick in chobj.opers():
                     if cmds[0] == 'die':
-                        self.die('Seppuku successful')
+                        self.die('Seppuku Successful')
                     elif cmds[0] == 'show':
                         for name, g in self.games.iteritems():
                             log.debug('Showing state for game %s', name)
@@ -105,6 +105,55 @@ class Hanabot(SingleServerIRCBot):
 
     # Game Commands
     #############################################################
+
+    def handle_help(self, args, event):
+        log.debug('got help event. args: %s', args)
+        nick = event.source.nick
+        usage = ['All commands end optionally with a gameid.',
+                 'Your IRC client must display mIRC colors to play.',
+                 '------------',
+                 '!new [gameid] - start a new game (named gameid, if given).',
+                 '!join [gameid] - join a game. If no gameid, join the single'
+                 ' game running.',
+                 '!leave [gameid] - leave a game.',
+                 '!move slotA slotB [gameid] - within your hand move cards,',
+                 '!tell nick color|numner slotA slotB ... slotN [gameid]',
+                 '!play slotN [gameid] - play a card to the table.',
+                 '!status [gameid] - show game status.',
+                 '!show [gameid] - show all game status, including hands'
+                 'and deck.']
+
+        for l in usage:
+            self.connection.notice(nick, l)
+
+    def handle_play(self, args, event):
+        log.debug('got play event. args: %s', args)
+        if 0 == len(args) or len(args) > 2:
+            return ['You must specify only a slot number (and optionally '
+                    'a game id).']
+
+        game_name = args[1] if len(args) == 2 else None
+        nick = event.source.nick
+        game = self._get_game(game_name, nick)
+        if not game:
+            return ['Unable to find game.']     # GTL fix
+
+        try:
+            slot = int(args[0])
+        except ValueError:
+            self.connection.notice(nick, '!play slot must be an integer.')
+            return
+
+        if slot <= 0 or slot >= 6:
+            self.connection.notice(nick, '!play slot must be between 1 and 5.')
+            return
+
+        # play the card and show the repsonse
+        for l in game.play_card(nick, slot):
+            self.connection.notice(self.channel, l)
+
+    def handle_tell(self, args, event):
+        pass
 
     def handle_status(self, args, event):
         '''
@@ -277,6 +326,7 @@ class Hanabot(SingleServerIRCBot):
 
         # at this point we know name is not None
         if name in self.games:
+            log.debug('Found game %s for nick %s', name, nick)
             return self.games[name]
         else:
             self.connection.notice(nick, 'GameID %s not found.' %
@@ -288,8 +338,8 @@ class Hanabot(SingleServerIRCBot):
         names = ['buffy', 'xander', 'willow', 'tara', 'anyanka', 'spike',
                  'giles', 'angel', 'mal', 'wash', 'simon', 'kaylee', 'zoe',
                  'river', 'book', 'inara', 'jayne', 'cordelia', 'oz', 'anya',
-                 'dawn', 'the_master', 'drusilla', 'darla', 'the_mayor', 
-                 'adam', 'glory', 'joyce', 'jenny', 'wesley', 'harmony', 
+                 'dawn', 'the_master', 'drusilla', 'darla', 'the_mayor',
+                 'adam', 'glory', 'joyce', 'jenny', 'wesley', 'harmony',
                  'kendra', 'olive', 'maisie']
 
         i = 0
@@ -302,4 +352,3 @@ class Hanabot(SingleServerIRCBot):
                     yield '%s_%d' % (n, i)
             else:
                 i += 1
-
