@@ -24,7 +24,8 @@ class Hanabot(SingleServerIRCBot):
         self.channel = channel if channel[0] == '#' else '#%s' % channel
 
         # valid bot commands
-        self.commands = ['status', 'start', 'stop', 'join', 'new', 'leave']
+        self.commands = ['status', 'start', 'stop', 'join', 'new', 'leave',
+                         'move']
         self.admin_commands = ['die', 'show']
 
         # name ---> Game object dict
@@ -107,12 +108,17 @@ class Hanabot(SingleServerIRCBot):
     def handle_status(self, args, event):
         '''
         Show status of all/one of games user is playing in.
-            args: [name (optional)]
+            args: [name]
         If game name is given, show just that game status.
         '''
-        log.debug('got status event')
-        game_name = None if len(args) == 0 else args[0]
+        log.debug('got status event. args: %s', args)
         nick = event.source.nick
+        if not len(self.games):
+            self.connection.notice(nick, 'There are no active games! '
+                                   'You can start one with !new [game]')
+            return
+
+        game_name = None if len(args) == 0 else args[0]
         for name, g in self.games.iteritems():
             if g.in_game(nick):
                 if (game_name and game_name == name) or not game_name:
@@ -126,19 +132,21 @@ class Hanabot(SingleServerIRCBot):
         If given, use the name as to id the game instance.
         '''
         log.debug('got new game event')
-        game = None if len(args) == 0 else args[0]
+        game_name = None if len(args) == 0 else args[0]
         nick = event.source.nick
-        if not game:
-            game = ''.join(random.choice(string.lowercase) for i in range(8))
+        if not game_name:
+            game_name = ''.join(random.choice(string.lowercase)
+                                for i in range(8))
 
-        if game in self.games.keys():
-            self.connection.notice(nick, 'The game %s already exists.' % game)
+        if game_name in self.games.keys():
+            self.connection.notice(nick, 'The game %s already exists.' %
+                                   self.markup.bold(game_name))
         else:
-            log.info('Starting new game %s' % game)
-            self.games[game] = Game(game, self.markup)
+            log.info('Starting new game %s' % self.markup.bold(game_name))
+            self.games[game_name] = Game(game_name, self.markup)
             self.connection.notice(self.channel, 'New game "%s" started by %s.'
                                    'Accepting joins now.' %
-                                   (self.markup.bold(game), nick))
+                                   (self.markup.bold(game_name), nick))
 
     def handle_join(self, args, event):
         '''args: [game]'''
@@ -151,58 +159,113 @@ class Hanabot(SingleServerIRCBot):
 
         nick = event.source.nick
         if len(args) == 0 and len(self.games) > 1:
-            self.connection.notice(nick, 'You must specify a game "!join game"'
-                                   'as there is more than one game going on.')
+            self.connection.notice(nick, 'You must specify a game via "!join '
+                                   'game" as there is more than one game going'
+                                   ' on.')
             return
 
-        game = self.games.keys()[0] if len(args) == 0 else args[0]
+        game_name = None if len(args) == 0 else args[0]
+        game = self._get_game(game_name, nick)
+        if not game:
+            return
 
-        if not game in self.games.keys():
-            self.connection.notice(nick, 'No such game: %s' %
-                                   self.markup.bold(game))
-        else:
-            for l in self.games[game].add_player(event.source.nick):
-                self.connection.notice(self.channel, l)
+        for l in game.add_player(event.source.nick):
+            self.connection.notice(self.channel, l)
 
     def handle_leave(self, args, event):
         '''args: game to leave. If not given leave all games.'''
-        log.debug('got leave event')
-        game = args[0]
+        log.debug('got leave event. args: %s', args)
         nick = event.source.nick
-        if not game:
+        game_name = None if len(args) == 0 else args[0]
+        if not game_name:
             # remove player from all games.
             for game in self.games.values():
-                for l in game.remove_player(nick):
-                    self.connection.notice(self.channel, l)
-                    self.connection.notice(nick, 'You have been removed from'
-                                           'game %s.' % self.markup.bold(game))
-        else:
-            # remove player from specific game
-            if not game in self.games.keys():
-                self.connection.notice(nick, 'Game %s does not exist.' %
-                                       self.markup.bold(game))
-            else:
-                for l in self.games[game].remove_player(nick):
-                    self.connection.notice(self.channel, l)
+                if game.in_game(nick):
+                    for l in game.remove_player(nick):
+                        self.connection.notice(self.channel, l)
 
-                self.connection.notice(nick, 'You have been removed from'
-                                       'game %s.' % self.markup.bold(game))
+                    self.connection.notice(nick, 'You have been removed from '
+                                           'game %s.' %
+                                           self.markup.bold(game_name))
+            return
+
+        game = self._get_game(game_name, nick)
+        if not game:
+            return
+
+        for l in game.remove_player(nick):
+            self.connection.notice(self.channel, l)
+
+        self.connection.notice(nick, 'You have been removed from game %s.' %
+                               self.markup.bold(game_name))
+
+    def handle_move(self, args, event):
+        '''arg format: from_slot to_slot [game]'''
+        log.debug('got handle_move event. args: %s', args)
+        nick = event.source.nick
+        err_mess = 'Error in move cmd. Should be !move from to [game]'
+        if len(args) != 2 and len(args) != 3:
+            self.connection.notice(nick, err_mess)
+            return
+
+        try: 
+            from_slot = int(args[0])
+            to_slot = int(args[1])
+        except ValueError:
+            self.connection.notice(nick, '!move args must be integers between '
+                                   '1 and 5.')
+            return
+
+        if from_slot < 0 or from_slot > 5 or to_slot < 0 or to_slot > 5:
+            self.connection.notice(nick, '!move args must be between 1 and 5.')
+            return
+
+        game_name = args[2] if len(args) == 3 else None
+        game = self._get_game(game_name, nick)
+        if not game:
+            return
+
+        # and finally do the move.
+        for l in game.move_card(nick, from_slot, to_slot):
+            self.connection.notice(self.channel, l)
 
     def handle_start(self, args, event):
         log.debug('got start event')
-        game = self.games.keys()[0] if len(args) == 0 else args[0]
         nick = event.source.nick
-        if not game and len(self.games) == 1:
-            # grab the first and only game and start it.
-            for l in self.games[self.games.keys()[0]].start_game():
-                self.connection.notice(self.channel, l)
-        else:
-            # find the game and start it.
-            if not game in self.games:
-                self.connection.notice(nick, 'Game %s does not exist' %
-                                       self.markup.bold(game))
+        game_name = None if len(args) == 0 else args[0]
+        game = self._get_game(game_name, nick)
+        if not game:
+            return
+
+        game.start_game()
 
     def handle_stop(self, args, event):
         log.debug('got stop event')
-        #game = args[0]
-        #nick = event.source.nick
+        nick = event.source.nick
+        game_name = None if len(args) == 0 else args[0]
+        game = self._get_game(game_name, nick)
+        if not game:
+            return
+
+        game.stop_game()
+
+    def _get_game(self, name, nick):
+        '''Given the name, find the referenced game. The name can be None
+        in which case the first game is returned. If there are no games,
+        None is returned. On error, a notice is sent to nick.'''
+        g = None
+        if len(self.games):
+            if not name and len(self.games) == 1:
+                # grab the first and only game
+                g = self.games[self.games.keys()[0]]
+            elif name in self.games:
+                g = self.games[name]
+
+        if name and not g:
+            self.connection.notice(nick, 'No such game %s' %
+                                   self.markup.bold(name))
+        elif not g:
+            self.connection.notice(nick, 'No active games. Start a new game '
+                                   'with !new [name].')
+
+        return g

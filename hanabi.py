@@ -62,6 +62,12 @@ class Player(object):
         self.hand = hand
         self.markup = markup
 
+    def move_card(self, A, B):
+        val = self.hand.pop(A-1)
+        self.hand.insert(B-1, val)
+        return ['%s moved card from slot %d to slot %d' %
+                (self.markup.bold(self.name), A, B)]
+
     def get_hand(self, hidden=False):
         if not hidden:
             return '%s: %s' % (self.markup.bold(self.name),
@@ -98,13 +104,11 @@ class Game(object):
         >>> for l in g.get_status('Olive'): print l     # doctest: +ELLIPSIS
          --- Game: FOOBAR ---
         OLIVE: ?????, MAISIE: ...
-        Notes: wwwwwwww, Storms: ___
-        45 cards remaining
+        Notes: wwwwwwww, Storms: OOO, 45 cards remaining
         >>> for l in g.get_status('Maisie'): print l    # doctest: +ELLIPSIS
          --- Game: FOOBAR ---
         OLIVE: ..., MAISIE: ?????
-        Notes: wwwwwwww, Storms: ___
-        45 cards remaining
+        Notes: wwwwwwww, Storms: OOO, 45 cards remaining
 
         In this example the "..." would be the random hand of the player
         listed.
@@ -122,7 +126,7 @@ class Game(object):
         self.name = name
         self.markup = markup
         self.notes = ['w' for i in range(8)]
-        self.storms = ['_' for i in range(3)]
+        self.storms = ['O' for i in range(3)]
         # The deck is Cards with color and count distributions shown, shuffled.
         colors = [markup.RED, markup.WHITE, markup.BLUE, markup.GREEN,
                   markup.YELLOW]
@@ -137,10 +141,16 @@ class Game(object):
 
         return False
 
+    def move_card(self, nick, A, B):
+        '''In nick's hand, move card from A to B slot. Assumes
+        input is valid: 1 <= A,B <= 5. So caller should cleanse input.'''
+        for p in self.players:
+            if p.name == nick:
+                return p.move_card(A, B)
+
     def get_status(self, nick, show_all=False):
         '''Return game status for player, masking that player's cards.'''
-        retVal = [' --- Game: %s ---' % self.markup.markup(self.name,
-                                                           self.markup.BOLD)]
+        retVal = [' --- Game: %s ---' % self.markup.bold(self.name)]
         players = []
         for p in self.players:
             if show_all:
@@ -152,9 +162,9 @@ class Game(object):
                     players.append(p.get_hand(hidden=True))
 
         retVal.append('%s' % ', '.join(players))
-        retVal.append('Notes: %s, Storms: %s' % (''.join(self.notes),
-                                                 ''.join(self.storms)))
-        retVal.append('%d cards remaining' % len(self.deck))
+        retVal.append('Notes: %s, Storms: %s, %d cards remaining.' %
+                      (''.join(self.notes), ''.join(self.storms),
+                       len(self.deck)))
 
         return retVal
 
@@ -176,7 +186,7 @@ class Game(object):
         retVal = list()
         if len(self.players) >= self.max_players:
             retVal.append('max players already in game %s. You can start'
-                          'another with !new [name]' % self.name)
+                          ' another with !new [name]' % self.name)
         else:
             for p in self.players:
                 if p.name == nick:

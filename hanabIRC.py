@@ -77,10 +77,6 @@ if __name__ == "__main__":
     # port = args.port if args.port else conf.port
     # notify_port = args.notify_port if args.notify_port else conf.notify_port
 
-    print 'server:', server
-    print 'channel:', channel
-    sys.exit(0)
-
     # ok - now we can do some actual work.
-    bot = Hanabot(args.server, args.channel)
+    bot = Hanabot(server, channel)
     bot.start()

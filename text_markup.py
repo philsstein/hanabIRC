@@ -132,6 +132,9 @@ class ascii_markup(text_markup_base):
     def __init__(self):
         text_markup_base.__init__(self)
 
+    def bold(self, text):
+        return self.markup(text, self.BOLD)
+
     def markup(self, text, markup):
         text_markup_base.markup(self, text, markup)
         return text.upper()
