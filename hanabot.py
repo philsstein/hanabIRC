@@ -1,4 +1,14 @@
+'''
+    hanabot.py implements an IRC bot that plays Hanabi.
 
+    It uses the hanabi.Game module Hanabi engine to 
+    get strings to display on the channel and private
+    messages to the player. 
+
+    It primarly is responsible for connecting to the 
+    channel, parsing incoming commands, and writing
+    reponses from the game engine.
+'''    
 import logging
 import time
 import string
@@ -30,9 +40,9 @@ class Hanabot(SingleServerIRCBot):
 
         # name ---> Game object dict
         self.games = {}
-
         self.markup = irc_markup()
-
+        # when next() is called, a new non-repeating game name
+        # is generated.
         self._game_ids = self._game_name_generator()
 
     # lib IRC callbacks
@@ -49,6 +59,8 @@ class Hanabot(SingleServerIRCBot):
         conn.join(self.channel)
         conn.notice(self.channel, 'Why I outta....')
 
+    # GTL TODO: sort out and correctly parse public and private msgs.
+    # the simple answer may be to just not allow private msgs.
     def on_privmsg(self, conn, event):
         log.debug('got privmsg. %s -> %s', event.source, event.arguments)
         self.parse_commands(event, event.arguments)
@@ -74,7 +86,8 @@ class Hanabot(SingleServerIRCBot):
         nick = event.source.nick
 
         # I don't understand when args will ever be more than just a string of
-        # space separated words
+        # space separated words - need more IRC lib experience or docs.
+
         cmds = cmds[0].split()
 
         # op only commands - return after executing.
@@ -87,15 +100,15 @@ class Hanabot(SingleServerIRCBot):
                     elif cmds[0] == 'show':
                         for name, g in self.games.iteritems():
                             log.debug('Showing state for game %s', name)
-                            for l in g.show_game_state():
-                                self.connection.notice(nick, l)
+                            self._display(g.show_game_state(), nick)
+
                     return
 
         # user commands
         if not cmds[0] in self.commands:
-            self.connection.notice(nick, 'My dearest brother Willis, I do not'
-                                   ' understand this "%s" of which you speak.'
-                                   % ' '.join(cmds))
+            self._to_nick(nick, 'My dearest brother Willis, I do not '
+                          'understand this "%s" of which you speak.' %
+                          ' '.join(cmds))
             return
 
         # call the appropriate handle_* function.
@@ -103,12 +116,36 @@ class Hanabot(SingleServerIRCBot):
         if method:
             method(cmds[1:], event)
 
+    # some sugar for sending msgs
+    def _display(self, output, nick):
+        '''Output is the list of (public, private) msgs generated
+        byt the Game engine. nick is the user to priv message.
+        output == (string list, string list).
+        __display assumes you want to send to self.channel.'''
+        for l in output[0]:
+            self.connection.notice(self.channel, l)
+
+        for l in output[1]:
+            self.connection.notice(nick, l)
+
+    # some sugar for sending msgs
+    def _to_chan(self, msgs):
+        if isinstance(msgs, list):
+            self._display((msgs, []), None)
+        elif isinstance(msgs, str):
+            self._display(([msgs], []), None)
+
+    # some sugar for sending strings
+    def _to_nick(self, nick, msgs):
+        if isinstance(msgs, list):
+            self._display(([], msgs), nick)
+        elif isinstance(msgs, str):
+            self._display(([], [msgs]), nick)
+
     # Game Commands
     #############################################################
-
     def handle_help(self, args, event):
         log.debug('got help event. args: %s', args)
-        nick = event.source.nick
         usage = ['All commands end optionally with a gameid.',
                  'Your IRC client must display mIRC colors to play.',
                  '------------',
@@ -122,35 +159,34 @@ class Hanabot(SingleServerIRCBot):
                  '!status [gameid] - show game status.',
                  '!show [gameid] - show all game status, including hands'
                  'and deck.']
-
-        for l in usage:
-            self.connection.notice(nick, l)
+        self._to_nick(nick, usage)
 
     def handle_play(self, args, event):
         log.debug('got play event. args: %s', args)
-        if 0 == len(args) or len(args) > 2:
-            return ['You must specify only a slot number (and optionally '
-                    'a game id).']
+        nick = event.source.nick
+        if not (0 < len(args) < 3):
+            self._to_nick(nick,'You must specify only a slot number (and '
+                               'optionally a game id).')
+            return
 
         game_name = args[1] if len(args) == 2 else None
-        nick = event.source.nick
         game = self._get_game(game_name, nick)
         if not game:
-            return ['Unable to find game.']     # GTL fix
+            self._to_nick(nick, 'Unable to find game.')
+            return
 
         try:
             slot = int(args[0])
         except ValueError:
-            self.connection.notice(nick, '!play slot must be an integer.')
+            self._to_nick(nick, '!play slot must be an integer.')
             return
 
-        if slot <= 0 or slot >= 6:
-            self.connection.notice(nick, '!play slot must be between 1 and 5.')
+        if not (0 < slot < 6):
+            self._to_nick(nick, '!play slot must be between 1 and 5.')
             return
 
         # play the card and show the repsonse
-        for l in game.play_card(nick, slot):
-            self.connection.notice(self.channel, l)
+        self._display(game.play_card(nick, slot), nick)
 
     def handle_tell(self, args, event):
         '''
@@ -159,8 +195,8 @@ class Hanabot(SingleServerIRCBot):
         log.debug('got tell event. args: %s', args)
         nick = event.source.nick
         if not len(self.games):
-            self.connection.notice(nick, 'There are no active games! '
-                                   'You can start one with !new [game]')
+            self._to_nick(nick, 'There are no active games! You can start one'
+                          ' with !new [game]')
             return
 
         # GTL TODO: finish this.
@@ -175,16 +211,15 @@ class Hanabot(SingleServerIRCBot):
         log.debug('got status event. args: %s', args)
         nick = event.source.nick
         if not len(self.games):
-            self.connection.notice(nick, 'There are no active games! '
-                                   'You can start one with !new [game]')
+            self._to_nick(nick, 'There are no active games! You can start one'
+                          ' with !new [game]')
             return
 
         game_name = None if len(args) == 0 else args[0]
         for name, g in self.games.iteritems():
             if g.in_game(nick):
                 if (game_name and game_name == name) or not game_name:
-                    for l in g.get_status(nick):
-                        self.connection.notice(nick, l)
+                    self._display(g.get_status(nick), nick)
 
     def handle_new(self, args, event):
         '''
@@ -197,31 +232,32 @@ class Hanabot(SingleServerIRCBot):
         nick = event.source.nick
         if not game_name:
             game_name = self._game_ids.next()
-
+        
+        pub, priv = [], []
         if game_name in self.games.keys():
-            self.connection.notice(nick, 'The game %s already exists.' %
-                                   self.markup.bold(game_name))
+            priv.append('The game %s already exists.' %
+                         self.markup.bold(game_name))
         else:
             log.info('Starting new game %s' % self.markup.bold(game_name))
             self.games[game_name] = Game(game_name, self.markup)
-            self.connection.notice(self.channel, 'New game "%s" started by %s.'
-                                   'Accepting joins now.' %
-                                   (self.markup.bold(game_name), nick))
+            pub.append('New game "%s" started by %s. Accepting joins '
+                       'now.' % (self.markup.bold(game_name), nick))
+
+        self._display((pub, priv), nick)
 
     def handle_join(self, args, event):
         '''args: [game]'''
         log.debug('got join event')
 
         if not len(self.games):
-            self.connection.notice(event.source.nick, 'There are no games'
-                                   ' going on! Start one with !new [name]')
+            self._to_nick(nick, 'There are no games going on! Start one with '
+                          '!new [name]')
             return
 
         nick = event.source.nick
         if len(args) == 0 and len(self.games) > 1:
-            self.connection.notice(nick, 'You must specify a game via "!join '
-                                   'game" as there is more than one game going'
-                                   ' on.')
+            self._to_nick(nick, 'You must specify a game via "!join game" as '
+                          'there is more than one game going on.')
             return
 
         game_name = None if len(args) == 0 else args[0]
@@ -229,9 +265,9 @@ class Hanabot(SingleServerIRCBot):
         if not game:
             return
 
-        for l in game.add_player(event.source.nick):
-            self.connection.notice(self.channel, l)
+        self._display(game.add_player(event.source.nick), nick)
 
+    # GTL TODO: make sure this is called when the players leaves the channel
     def handle_leave(self, args, event):
         '''args: game to leave. If not given leave all games.'''
         log.debug('got leave event. args: %s', args)
@@ -241,43 +277,33 @@ class Hanabot(SingleServerIRCBot):
             # remove player from all games.
             for game in self.games.values():
                 if game.in_game(nick):
-                    for l in game.remove_player(nick):
-                        self.connection.notice(self.channel, l)
-
-                    self.connection.notice(nick, 'You have been removed from '
-                                           'game %s.' %
-                                           self.markup.bold(game_name))
+                    self._display(game.remove_player(nick), nick)
             return
 
         game = self._get_game(game_name, nick)
         if not game:
             return
 
-        for l in game.remove_player(nick):
-            self.connection.notice(self.channel, l)
-
-        self.connection.notice(nick, 'You have been removed from game %s.' %
-                               self.markup.bold(game_name))
+        self._display(game.remove_player(nick), nick)
 
     def handle_move(self, args, event):
         '''arg format: from_slot to_slot [game]'''
         log.debug('got handle_move event. args: %s', args)
         nick = event.source.nick
-        err_mess = 'Error in move cmd. Should be !move from to [game]'
-        if len(args) != 2 and len(args) != 3:
-            self.connection.notice(nick, err_mess)
+        if not (1 < len(args) < 4):
+            self._to_nick(nick,  'Error in move cmd. Should be !move slotA '
+                          'slotB [game]')
             return
 
         try:
             from_slot = int(args[0])
             to_slot = int(args[1])
         except ValueError:
-            self.connection.notice(nick, '!move args must be integers between '
-                                   '1 and 5.')
+            self._to_nick(nick, '!move args must be integers between 1 and 5.')
             return
 
-        if from_slot < 0 or from_slot > 5 or to_slot < 0 or to_slot > 5:
-            self.connection.notice(nick, '!move args must be between 1 and 5.')
+        if not (0 < from_slot < 6) or not (0 < to_slot < 6):
+            self._to_nick(nick, '!move args must be between 1 and 5.')
             return
 
         game_name = args[2] if len(args) == 3 else None
@@ -286,8 +312,7 @@ class Hanabot(SingleServerIRCBot):
             return
 
         # and finally do the move.
-        for l in game.move_card(nick, from_slot, to_slot):
-            self.connection.notice(self.channel, l)
+        self._display(game.move_card(nick, from_slot, to_slot), nick)
 
     def handle_start(self, args, event):
         log.debug('got start event')
@@ -297,9 +322,7 @@ class Hanabot(SingleServerIRCBot):
         if not game:
             return
 
-        for l in game.start_game():
-            self.connection.notice(self.channel, 'Game %s started!' %
-                                   (self.markup.bold(game.name)))
+        self._display(game.start_game(), nick)
 
     def handle_stop(self, args, event):
         log.debug('got stop event')
@@ -309,8 +332,7 @@ class Hanabot(SingleServerIRCBot):
         if not game:
             return
 
-        for l in game.stop_game():
-            self.connection.notice(self.channel, l)
+        self._display(game.stop_game(), nick)
 
     def _get_game(self, name, nick):
         '''Given the name, find the referenced game. The name can be None
@@ -323,16 +345,16 @@ class Hanabot(SingleServerIRCBot):
         #       than one game'
         #   name given: if found return game, else fail 'that game not found'
         if len(self.games) == 0:
-            self.connection.notice(nick, 'No games available. Start a one with'
-                                   ' !new [gameID]')
+            self._to_nick(nick, 'No games available. Start a one with !new '
+                          '[gameID]')
             return None
 
         if not name:
             if len(self.games) == 1:
                 return self.games[self.games.keys()[0]]
             else:
-                self.connection.notice(nick, 'More than one active game, '
-                                       'specify which with the gameID')
+                self._to_nick(nick, 'More than one active game, specify which'
+                              ' with the gameID')
                 return None
 
         # at this point we know name is not None

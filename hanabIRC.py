@@ -1,4 +1,25 @@
+'''
+    hanabIRC reads configuration information from a configuration
+    file or the command line and starts a hanabi playing IRC bot
+    on the configured server and channel.
 
+    usage: hanabIRC.py [-h] [-s SERVER] [-c CHANNEL]
+                       [-l {debug,info,warning,error,critical}]
+                       [--config CONFFILE]
+    
+    hanabot manages games of Hanabi on IRC.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -s SERVER, --server SERVER
+                            The IRC server to connect to.
+      -c CHANNEL, --channel CHANNEL
+                            The IRC #channel to connect to.
+      -l {debug,info,warning,error,critical}, --loglevel {debug,info,warning,error,critical}
+                            Set the global log level
+      --config CONFFILE     Configuration file. Command line will override values
+                            found here.
+'''
 import argparse
 import logging
 import sys

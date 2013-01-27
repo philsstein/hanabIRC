@@ -1,3 +1,28 @@
+'''
+    hanabi.py implements the logic of the game Hanabi.
+
+    It exports an API for player and card management. The API
+    generally returns arrays of strings suitable for display to 
+    game players. These strings can be dumped to an IRC channel,
+    or directly to a socket, stdout, etc. 
+
+    The general play sequence is: 
+        add players
+        start game
+        in turn order a player:
+            plays a card to the table or
+            tells a another player about their hand or
+            discards a card
+
+        The game ends when a player plays a card incorrectly
+        to the table three times, as shown by the Storm tokens or
+        the draw deck is empty.
+
+        There is group scoring and the score is based on the 
+        number of legally played cards on the table at the end 
+        of the game.
+
+'''
 import logging
 import random
 
@@ -44,6 +69,8 @@ class Player(object):
     If the player themselves is requesting to see the hand, they get
     an opaque hand. If anyone else wants to see it, they see it all.
 
+    Players can modify the order of cards in their own hands as well.
+
     example:
     >>> from text_markup import ascii_markup
     >>> a = ascii_markup()
@@ -55,20 +82,25 @@ class Player(object):
     'OLIVE: ??????????'
     >>> p.get_hand(hidden=False)
     'OLIVE: r[1]r[1]r[2]r[3]r[4]b[1]b[1]b[2]b[3]b[4]'
+    >>> p.move_card(2, 3)
+    ['OLIVE moved card from slot 2 to slot 3']
+    >>> p.get_hand(hidden=False)
+    'OLIVE: r[1]r[2]r[1]r[3]r[4]b[1]b[1]b[2]b[3]b[4]'
     '''
-
     def __init__(self, name, hand, markup):
         self.name = str(name)
         self.hand = hand
         self.markup = markup
 
     def move_card(self, A, B):
+        '''move a card within a hand. output is for the group.'''
         val = self.hand.pop(A-1)
         self.hand.insert(B-1, val)
         return ['%s moved card from slot %d to slot %d' %
                 (self.markup.bold(self.name), A, B)]
 
     def get_hand(self, hidden=False):
+        '''return the hand as a string.'''
         if not hidden:
             return '%s: %s' % (self.markup.bold(self.name),
                                ''.join([str(c) for c in self.hand]))
@@ -85,12 +117,24 @@ class Game(object):
         The Game itself. Keeps track of players, turns, and cards.
         Returns lists of strings that describe current game state.
 
-        Most functions return a list of strings suitable to outputting
-        to a console or IRC channel, etc.
-
-        See below for extended usage sample.
+        Most functions return a pair of list of strings. The first
+        is for public display, the second for display to the player.
 
         Example:
+        (pub, priv) = game.function(...)
+        show_user(priv)
+        show_all(pub)
+
+        See below for extended usage sample. In this example the "..."
+        is filled with a card or list of cards. (doctest needs the ...
+        evaluate the statements correctly as the cards change everytime.
+
+        Example:
+        >>> def display(pub, priv):
+        ...     for d in [('public:', pub), ('private:', priv)]:
+        ...             print d[0]
+        ...             for l in d[1]:
+        ...                     print l
         >>> from text_markup import ascii_markup
         >>> g = Game('foobar', ascii_markup())
         >>> g.start_game()
@@ -101,17 +145,20 @@ class Game(object):
         ['Maisie has joined game foobar']
         >>> g.start_game()
         ['Game FOOBAR started!']
+        >>> g.in_game('Olive')
+        True
+        >>> g.in_game('Fred')
+        False
         >>> for l in g.get_status('Olive'): print l     # doctest: +ELLIPSIS
          --- Game: FOOBAR ---
         OLIVE: ?????, MAISIE: ...
-        Notes: wwwwwwww, Storms: OOO, 45 cards remaining
-        >>> for l in g.get_status('Maisie'): print l    # doctest: +ELLIPSIS
+        Table: empty
+        Notes: wwwwwwww, Storms: OOO, 45 cards remaining.
+        >>> for l in g.get_status('Maisie'): print l        # doctest: +ELLIPSIS
          --- Game: FOOBAR ---
         OLIVE: ..., MAISIE: ?????
-        Notes: wwwwwwww, Storms: OOO, 45 cards remaining
-
-        In this example the "..." would be the random hand of the player
-        listed.
+        Table: empty
+        Notes: wwwwwwww, Storms: OOO, 45 cards remaining.
     '''
     def __init__(self, name, markup):
         '''
@@ -156,7 +203,7 @@ class Game(object):
         return True
 
     def _end_game(self):
-        return ['The game is over.']
+        return (['The game is over.'],[])
 
     def _is_valid_play(self, c):
         if not len(self.table[c.color]):
@@ -173,9 +220,11 @@ class Game(object):
 
     def play_card(self, nick, i):
         '''Have player "nick" play card in slot N from his/her hand.
-        "i" is indexed by 1 (slot number) and must be between 1 and 5.'''
+        "i" is indexed by 1 (slot number) and must be between 1 and 5,
+        The output is for group consumption.'''
+        pub, priv = [], []
         if not nick in self.players:
-            return ['You are not in game %s.' % self.markup.bold(self.name)]
+            return priv.append('You are not in game %s.' % self.markup.bold(self.name))
 
         c = self.players[nick].hand.pop(i-1)
         retVal = []
@@ -183,115 +232,135 @@ class Game(object):
         if self._is_valid_play(c):
             self.table[c.color].append(c)
             self.table[c.color].sort()   # GTL this is not really needed.
-            retVal.append('%s successfully added %s to the %s group.' %
+            pub.append('%s successfully added %s to the %s group.' %
                           (nick, str(c), c.color))
         else:
-            retVal.append('%s guessed wrong with %s! One storm token '
+            pub.append('%s guessed wrong with %s! One storm token '
                           'flipped!' % (nick, str(c)))
             end_game = self._flip(self.storms, 'O', 'X')
             self.discards.append(c)
 
         if not len(self.deck) or end_game:
-            retVal += self._end_game()
+            a, b = self._end_game()
+            pub += a
+            priv += b
         else:
-            retVal.append('%s drew a new card from the deck.' % nick)
+            pub.append('%s drew a new card from the deck.' % nick)
             self.players[nick].hand.append(self.deck.pop())
 
-        return retVal
+        return (pub, priv)
 
     def move_card(self, nick, A, B):
         '''In nick's hand, move card from A to B slot. Assumes
         input is valid: 1 <= A,B <= 5. So caller should cleanse input.'''
+        pub, priv = [], []
         if not nick in self.players:
-            return ['You are not in game %s.' % self.markup.bold(self.name)]
+            priv.append('You are not in game %s.' % self.markup.bold(self.name))
 
-        return self.players[nick].move_card(A, B)
+        a, b =  self.players[nick].move_card(A, B)
+        pub += a
+        priv += b
+        return (pub, priv)
 
     def get_status(self, nick, show_all=False):
         '''Return game status for player, masking that player's cards.'''
-        retVal = [' --- Game: %s ---' % self.markup.bold(self.name)]
-        status = []
+        pub = [' --- Game: %s ---' % self.markup.bold(self.name)]
+        hands = []
         for p in self.players.values():
             if show_all:
-                status.append(p.get_hand())
+                hands.append(p.get_hand())
             else:
                 if p.name != nick:
-                    status.append(p.get_hand())
+                    hands.append(p.get_hand())
                 else:
-                    status.append(p.get_hand(hidden=True))
+                    hands.append(p.get_hand(hidden=True))
 
-        retVal.append('%s' % ', '.join(status))
-        tabstr = list()
+        pub.append(', '.join(hands))
+
+        # GTL - this could be done in a confusing list comprehension.
+        cardstrs = list()
         for cardstack in self.table.values():
             if len(cardstack):
-                tabstr.append(''.join(str(c) for c in cardstack))
+                cardstrs.append(''.join(str(c) for c in cardstack))
 
-        retVal.append('Table: %s' % ', '.join(cardstrs))
-        retVal.append('Notes: %s, Storms: %s, %d cards remaining.' %
+        if not cardstrs:
+            pub.append('Table: empty')
+        else:
+            pub.append('Table: %s' % ', '.join(cardstrs))
+
+        pub.append('Notes: %s, Storms: %s, %d cards remaining.' %
                       (''.join(self.notes), ''.join(self.storms),
                        len(self.deck)))
         if len(self.discards):
-            retVal.append('Top discard: %s. (size is %d)' %
+            pub.append('Top discard: %s. (size is %d)' %
                           (str(self.discards[-1]), len(self.discards)))
 
-        return retVal
+        return (pub,[])
 
     def show_game_state(self):
         '''Show the entire game status - only for
         debugging/super user/non-players.'''
-        retVal = list()
+        pub, priv = [], []
         if len(self.players):
-            retVal += self.get_status(
+            # we just show the status of frst player w/show_all=True
+            a, b = self.get_status(
                 self.players[self.players.keys()[0]].name, show_all=True)
+            pub += a
+            priv += b
         else:
-            retVal.append(' --- Game %s is waiting for players to join --- ' %
+            priv.append(' --- Game %s is waiting for players to join --- ' %
                           self.markup.bold(self.name))
 
-        retVal.append('Deck: %s' % ''.join([str(c) for c in self.deck]))
+        priv.append('Deck: %s' % ''.join([str(c) for c in self.deck]))
+        priv.append('Discard: %s' % ''.join([str(c) for c in self.discards]))
 
-        return retVal
+        return (pub, priv)
 
     def add_player(self, nick):
         if self._playing:
-            return ['Game %s already started.' % self.markup.bold(self.name)]
+            return ([],['Game %s already started.' % self.markup.bold(self.name)])
 
-        retVal = list()
+        pub, priv = [], []
         if len(self.players) >= self.max_players:
-            retVal.append('max players already in game %s. You can start'
+            priv.append('max players already in game %s. You can start'
                           ' another with !new [name]' % self.name)
         else:
             if nick in self.players:
-                retVal.append('You are already in game %s' % self.name)
+                priv.append('You are already in game %s' % self.name)
             else:
                 hand = self.deck[:5]
                 self.deck = self.deck[5:]
                 self.players[nick] = Player(nick, hand, self.markup)
-                retVal.append('%s has joined game %s' % (nick, self.name))
+                pub.append('%s has joined game %s' %
+                           (nick, self.markup.bold(self.name)))
 
-        return retVal
+        return (pub, priv)
 
     def remove_player(self, nick):
         if not nick in self.players:
-            return ['You are not in game %s' % self.markup.bold(self.name)]
+            return ([],['You are not in game %s. You cannot be removed from a game you'
+                      ' are not in.' % self.markup.bold(self.name)])
 
-        retVal = []
-        retVal.append('Putting %s\'s cards back in the'
+        pub, priv = [], []
+        pub.append('Removing %s from game %s' % (nick, self.name))
+        priv.append('You\'ve been removed from game %s.' % self.name)
+        pub.append('Putting %s\'s cards back in the'
                       ' deck and reshuffling.' % nick)
         self.deck += self.players[nick].hand
         random.shuffle(self.deck)
-        retVal.append('Removing %s from game %s' %
-                      (self.players[nick].name, self.name))
-        self.players = [p for p in self.players if p.name != nick]
+        self.players = {name: p for name, p in self.players.iteritems() if name != nick}
 
-        return retVal
+        return (pub, priv)
 
     def start_game(self):
+        pub, priv = [], []
         if len(self.players) > 1:
             self._playing = True
+            pub.append('Game %s started!' % self.markup.bold(self.name))
         else:
-            return ['There are not enough players in the game, not starting.']
+            priv.append('There are not enough players in the game, not starting.')
 
-        return ['Game %s started!' % self.markup.bold(self.name)]
+        return (pub, priv)
 
 if __name__ == "__main__":
     import doctest
