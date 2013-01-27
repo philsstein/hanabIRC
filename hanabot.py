@@ -153,6 +153,17 @@ class Hanabot(SingleServerIRCBot):
             self.connection.notice(self.channel, l)
 
     def handle_tell(self, args, event):
+        '''
+            !tell nick <color>|<number> slotA ... slotN
+        '''
+        log.debug('got tell event. args: %s', args)
+        nick = event.source.nick
+        if not len(self.games):
+            self.connection.notice(nick, 'There are no active games! '
+                                   'You can start one with !new [game]')
+            return
+
+        # GTL TODO: finish this.
         pass
 
     def handle_status(self, args, event):

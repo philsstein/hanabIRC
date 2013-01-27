@@ -221,8 +221,12 @@ class Game(object):
                     status.append(p.get_hand(hidden=True))
 
         retVal.append('%s' % ', '.join(status))
-        cards = self.table.values()
-        retVal.append('Table: %s' % ', '.join([''.join([str(card) for card in cards])]))
+        tabstr = list()
+        for cardstack in self.table.values():
+            if len(cardstack):
+                tabstr.append(''.join(str(c) for c in cardstack))
+
+        retVal.append('Table: %s' % ', '.join(cardstrs))
         retVal.append('Notes: %s, Storms: %s, %d cards remaining.' %
                       (''.join(self.notes), ''.join(self.storms),
                        len(self.deck)))
