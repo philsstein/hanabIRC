@@ -11,7 +11,8 @@
         start game
         in turn order a player:
             plays a card to the table or
-            tells a another player about their hand or
+            tells a another player about their hand (this is 
+                not handled by the Game engine) or
             discards a card
 
         The game ends when a player plays a card incorrectly
@@ -169,6 +170,8 @@ class Game(object):
             contexts, like IRC and xterms.
         '''
         self.players = {}
+        # turn_order[0] is always current player's name
+        self.turn_order = []
         self.max_players = 5
         self.name = name
         self.markup = markup
@@ -181,6 +184,7 @@ class Game(object):
                      for n in [1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5]]
         random.shuffle(self.deck)
         self._playing = False
+        self.game_over = False
 
         # table is a dict of lists of cards, indexed by color or use.
         self.table = {}
@@ -198,12 +202,18 @@ class Game(object):
         for i in xrange(len(tokens)):
             if tokens[i] == A:
                 tokens[i] = B
+                if i == len(tokens)-1:
+                    return True
+
                 return False
 
         return True
 
     def _end_game(self):
-        return (['The game is over.'],[])
+        score = sum([len(cs) for cs in self.table.values()])
+        self.game_over = True
+        self._playing = False
+        return (['The game is over. Final score is %d' % score],[])
 
     def _is_valid_play(self, c):
         if not len(self.table[c.color]):
@@ -218,6 +228,17 @@ class Game(object):
             else:
                 return False
 
+    def turn(self, nick):
+        '''Tell the players whos turn it is.'''
+        return (['It is %s\'s turn to play.' % self.turn_order[0]], [])
+
+    def discard_card(self, nick, i):
+        '''Discard the card in slot i.'''
+        if self.turn_order[0] != nick:
+            return ([], ['It is not your turn. It is %s\'s turn.' % self.turn_order[0]])
+
+        return (['discard not yet implemented'], [])
+
     def play_card(self, nick, i):
         '''Have player "nick" play card in slot N from his/her hand.
         "i" is indexed by 1 (slot number) and must be between 1 and 5,
@@ -225,6 +246,9 @@ class Game(object):
         pub, priv = [], []
         if not nick in self.players:
             return priv.append('You are not in game %s.' % self.markup.bold(self.name))
+
+        if self.turn_order[0] != nick:
+            return ([], ['It is not your turn. It is %s\'s turn.' % self.turn_order[0]])
 
         c = self.players[nick].hand.pop(i-1)
         retVal = []
@@ -239,6 +263,8 @@ class Game(object):
                           'flipped!' % (nick, str(c)))
             end_game = self._flip(self.storms, 'O', 'X')
             self.discards.append(c)
+
+        self.turn_order.append(self.turn_order.pop(0))
 
         if not len(self.deck) or end_game:
             a, b = self._end_game()
@@ -288,9 +314,11 @@ class Game(object):
         else:
             pub.append('Table: %s' % ', '.join(cardstrs))
 
-        pub.append('Notes: %s, Storms: %s, %d cards remaining.' %
+        cur_player = self.turn_order[0] if len(self.turn_order) else 'N/A'
+        pub.append('Notes: %s, Storms: %s, %d cards remaining. '
+                   'Current player: %s' %
                       (''.join(self.notes), ''.join(self.storms),
-                       len(self.deck)))
+                       len(self.deck), cur_player))
         if len(self.discards):
             pub.append('Top discard: %s. (size is %d)' %
                           (str(self.discards[-1]), len(self.discards)))
@@ -350,6 +378,12 @@ class Game(object):
         random.shuffle(self.deck)
         self.players = {name: p for name, p in self.players.iteritems() if name != nick}
 
+        if self.turn_order:
+            if nick == self.turn_order[0]:
+                pub.append('It is now %s\'s turn.' % self.turn_order[1])
+       
+            self.turn_order = [p for p in self.turn_order if p != nick]
+
         return (pub, priv)
 
     def start_game(self):
@@ -357,9 +391,10 @@ class Game(object):
         if len(self.players) > 1:
             self._playing = True
             pub.append('Game %s started!' % self.markup.bold(self.name))
+            self.turn_order = random.sample(self.players.keys(), len(self.players))
         else:
             priv.append('There are not enough players in the game, not starting.')
-
+        
         return (pub, priv)
 
 if __name__ == "__main__":

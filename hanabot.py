@@ -35,7 +35,7 @@ class Hanabot(SingleServerIRCBot):
 
         # valid bot commands
         self.commands = ['status', 'start', 'stop', 'join', 'new', 'leave',
-                         'move', 'help', 'play', 'tell']
+                         'move', 'help', 'play', 'turn', 'discard']
         self.admin_commands = ['die', 'show']
 
         # name ---> Game object dict
@@ -154,7 +154,6 @@ class Hanabot(SingleServerIRCBot):
                  ' game running.',
                  '!leave [gameid] - leave a game.',
                  '!move slotA slotB [gameid] - within your hand move cards,',
-                 '!tell nick color|numner slotA slotB ... slotN [gameid]',
                  '!play slotN [gameid] - play a card to the table.',
                  '!status [gameid] - show game status.',
                  '!show [gameid] - show all game status, including hands'
@@ -188,19 +187,14 @@ class Hanabot(SingleServerIRCBot):
         # play the card and show the repsonse
         self._display(game.play_card(nick, slot), nick)
 
-    def handle_tell(self, args, event):
-        '''
-            !tell nick <color>|<number> slotA ... slotN
-        '''
-        log.debug('got tell event. args: %s', args)
-        nick = event.source.nick
-        if not len(self.games):
-            self._to_nick(nick, 'There are no active games! You can start one'
-                          ' with !new [game]')
-            return
+        # playing a card can trigger end game.
+        if g.game_over:
+            if game_name in self.games:
+                del(self.games[game_name])
+            elif: len(self.games) == 1:   # GTL race condition here.
+                self.games = {}
 
-        # GTL TODO: finish this.
-        pass
+            # GTL: TODO there are other cases here. Find them.
 
     def handle_status(self, args, event):
         '''
