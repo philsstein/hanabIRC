@@ -11,7 +11,7 @@
         start game
         in turn order a player:
             plays a card to the table or
-            tells a another player about their hand (this is 
+            hints a another player about their hand (this is 
                 not handled by the Game engine) or
             discards a card
 
@@ -190,7 +190,7 @@ class Game(object):
 
         random.shuffle(self.deck)
         self._playing = False
-        self.game_over = False
+        self._game_over = False
 
         # table is a dict of lists of cards, indexed by color or use.
         self.table = {}
@@ -211,6 +211,9 @@ class Game(object):
     def has_started(self):
         return self._playing
 
+    def game_over(self):
+        return self._game_over
+
     def players(self):
         '''return a list of player ids in the game.'''
         return self.players.keys()
@@ -227,7 +230,8 @@ class Game(object):
             return (pub, priv)
             
         c = self.players[nick].hand.pop(i-1)
-        self.discard.append(c)
+        pub.append('%s has discarded a %s' % (nick, str(c)))
+        self.discards.append(c)
         self.players[nick].hand.append(self.deck.pop(0))
         self._flip(self.notes, self.notes_down, self.notes_up)
         self.turn_order.append(self.turn_order.pop(0))
@@ -270,38 +274,43 @@ class Game(object):
 
         return (pub, priv)
 
-    def tell_player(self, nick, other_nick, cmd, slots):
+    def hint_player(self, nick, other_nick, cmd, slots):
         '''
-            tell_player: tell another player about thier hand.
+            hint_player: hint another player about thier hand.
 
-            nick: who is telling
-            other_nick: the tellee
+            nick: who is hinting
+            other_nick: the hintee
             cmd: can be one of: 
                 string: a valid color
                 int: a valid number (int)
             slots: a list of card slots.
 
-            tell_player validates input.
+            hint_player validates input.
         '''
         pub, priv = [], []
         if not self._in_game_is_turn(nick, priv):
             return (pub, priv)
 
-        pub = ['Invalid tell command still %s\'s turn.' % self.turn_order[0]]
+        pub.append('Invalid hint command still %s\'s turn.' % self.turn_order[0])
         if not other_nick in self.players:
             priv.append('%s is not in this game %s' % (other_nick, self.name))
             return (pub, priv)
 
         if not isinstance(slots, list):
-            priv.append('I did not understand that tell command.')
+            priv.append('I did not understand that hint command.')
             return (pub, priv)
 
-        if isinstance(cmd, str) and not cmd in self.colors:
-            priv.append('%s is not a valid color. Valid colors are %s.' %
-                    ', '.join(self.colors))
-            return (pub, priv)
-
-        if isinstance(cmd, int) and not 0 < cmd < 6:
+        if isinstance(cmd, str):
+            if not cmd in self.colors:
+                # color the colors with thier own colors...
+                colors = [self.markup.color(c, c) for c in self.colors]
+                priv.append('%s is not a valid color. Valid colors are %s.' %
+                        (cmd, ', '.join(colors)))
+                return (pub, priv)
+            else:
+                # color the color with its color.
+                cmd = self.markup.color(cmd, cmd)
+        elif isinstance(cmd, int) and not 0 < cmd < 6:
             priv.append('numbers must be between 1 and 5 inclusive.')
             return (pub, priv)
 
@@ -310,12 +319,21 @@ class Game(object):
                 priv.append('Slots must be between 1 and 5 inclusive.')
                 return (pub, priv)
 
-        # TODO: Do we want to actually validate the tell command?
+        # TODO: Do we want to actually validate the hint command?
+        # if a lie, tell everyone that 'nick' is a dirty-low down
+        # deceiver. 
 
-        # valid tell command, do the action.
+        # valid hint command, do the action.
         pub = []
-        pub.append('%s: your hand contains a %s card in slots %s' %
-               (other_nick, cmd, ', '.join([str(s) for s in slots])))
+        if not self.notes_up in self.notes:
+            pub.append('Oh no! %s gave a hint when all notes were black '
+                       'side down. ' % nick)
+            pub.append('Shame on them!')
+
+        plural = 's' if len(slots) > 1 else ''
+        pub.append('%s: your hand contains a %s card in slot%s %s' %
+               (other_nick, str(cmd), plural,
+                ', '.join([str(s) for s in slots])))
         self.turn_order.append(self.turn_order.pop(0))
         pub.append('It is now %s\'s turn in game %s.' %
                    (self.turn_order[0], self.markup.bold(self.name)))
@@ -338,7 +356,8 @@ class Game(object):
 
     def get_status(self, nick, show_all=False):
         '''Return game status for player, masking that player's cards.'''
-        pub = [' --- Game: %s ---' % self.markup.bold(self.name)]
+        pub = []
+        priv = ['--- Game Status: %s ---' % self.markup.bold(self.name)]
         hands = []
         for p in self.players.values():
             if show_all:
@@ -349,7 +368,7 @@ class Game(object):
                 else:
                     hands.append(p.get_hand(hidden=True))
 
-        pub.append(', '.join(hands))
+        priv.append(', '.join(hands))
 
         # GTL - this could be done in a confusing list comprehension.
         cardstrs = list()
@@ -358,20 +377,20 @@ class Game(object):
                 cardstrs.append(''.join(str(c) for c in cardstack))
 
         if not cardstrs:
-            pub.append('Table: empty')
+            priv.append('Table: empty')
         else:
-            pub.append('Table: %s' % ', '.join(cardstrs))
+            priv.append('Table: %s' % ', '.join(cardstrs))
 
         cur_player = self.turn_order[0] if len(self.turn_order) else 'N/A'
-        pub.append('Notes: %s, Storms: %s, %d cards remaining. '
-                   'Current player: %s' %
-                      (''.join(self.notes), ''.join(self.storms),
-                       len(self.deck), cur_player))
+        priv.append('Notes: %s, Storms: %s, %d cards remaining.' %
+                      (''.join(self.notes), ''.join(self.storms), 
+                       len(self.deck)))
+        priv.append('Current player: %s' % cur_player)
         if len(self.discards):
-            pub.append('Top discard: %s. (size is %d)' %
+            priv.append('Top discard: %s. (size is %d)' %
                           (str(self.discards[-1]), len(self.discards)))
 
-        return (pub,[])
+        return (pub, priv)
 
     def show_game_state(self):
         '''Show the entire game status - only for
@@ -407,8 +426,11 @@ class Game(object):
                 hand = self.deck[:5]
                 self.deck = self.deck[5:]
                 self.players[nick] = Player(nick, hand, self.markup)
-                pub.append('%s has joined game %s' %
+                pub.append('%s has joined game %s.' %
                            (nick, self.markup.bold(self.name)))
+                if len(self.players) > 1:
+                    pub.append('Game %s has enough players and can be started '
+                               'with the start command,' % self.markup.bold(self.name))
 
         return (pub, priv)
 
@@ -452,6 +474,7 @@ class Game(object):
             self.turn_order = random.sample(self.players.keys(), len(self.players))
         else:
             priv.append('There are not enough players in the game, not starting.')
+            return (pub, priv)
         
         pub.append('It is now %s\'s turn in game %s.' %
                    (self.turn_order[0], self.markup.bold(self.name)))
@@ -479,7 +502,7 @@ class Game(object):
                 return
 
     def _is_game_over(self):
-        '''Return True is end game state is active.'''
+        '''Return True if ay end game condition is true.'''
         if not len(self.deck):
             return True
         elif 25 == sum([len(cs) for cs in self.table.values()]):
@@ -489,13 +512,28 @@ class Game(object):
 
     def _end_game(self, pub, priv):
         score = sum([len(cs) for cs in self.table.values()])
-        self.game_over = True
+        self._game_over = True
         self._playing = False
-        pub += ['\n', '\n']
-        pub.append('Game %s is over. Final score is %d' % (self.name, score))
-        if score == 25:
+        pub += ['-------------------------']
+        pub.append('Game %s is over. Final score is %d.' %
+                   (self.markup.bold(self.name), score))
+        if 0 <= score <= 5:
+            pub.append('Oh dear! The crowd booed')
+        elif 6 <= score <= 10:
+            pub.append('Poor! Hardly any applause.')
+        elif 11 <= score <= 15:
+            pub.append('OK! The audience has seen better.')
+        elif 16 <= score <= 20:
+            pub.append('Good! The audience is pleased!')
+        elif 21 <= score <= 24:
+            pub.append('Very good! The audience is enthusiastic!')
+        elif score == 25:
             pub.append('%s! It\'s a perfect game! 25 points!' % self._rainbow('Congratulations'))
-        pub += ['\n', '\n']
+        else:
+            pub.append('Hmm. score should only be in range 0 to 25. Somthing is amiss. '
+                       ' Might as well play again...')
+
+        pub += ['-------------------------']
 
     def _is_valid_play(self, c):
         if not len(self.table[c.color]):

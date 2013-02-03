@@ -34,9 +34,9 @@ class Hanabot(SingleServerIRCBot):
         self.channel = channel if channel[0] == '#' else '#%s' % channel
 
         # valid bot commands
-        self.commands = ['status', 'start', 'stop', 'join', 'new', 'leave',
-                         'move', 'help', 'play', 'turn', 'discard', 'tell',
-                         'rules', 'games']
+        self.commands = ['status', 'start', 'delete', 'join', 'new', 'leave',
+                         'move', 'help', 'play', 'turn', 'discard', 'hint',
+                         'rules', 'games', 'list', 'st']
         self.admin_commands = ['die', 'show']
 
         # name ---> Game object dict
@@ -131,6 +131,7 @@ class Hanabot(SingleServerIRCBot):
 
     # some sugar for sending msgs
     def _to_chan(self, msgs):
+        print 'sending to channel:', msgs
         if isinstance(msgs, list):
             self._display((msgs, []), None)
         elif isinstance(msgs, str):
@@ -158,32 +159,35 @@ class Hanabot(SingleServerIRCBot):
                  '!new [game id] - start a new game (named game id, if given).',
                  '!join [game id] - join a game. If no game id, join the single'
                  ' game running.',
-                 '!leave [game id] - leave a game.',
+                 '!start [game id] - start a game. The game must have at least '
+                 'two players.', 
+                 '!delete [game id] - delete a game.', 
+                 '!leave [game id] - leave a game. This is bad form.',
                  '!move slotA slotB [game id] - move cards within your hand.', 
                  '!play slotN [game id] - play a card to the table.',
-                 '!tell nick color|number slotA ... slotN - tell another ',
-                 'player which color or number cards are in their hand. ',
+                 '!hint nick color|number slotA ... slotN - give a hint to a'
+                 'player about which color or number cards are in their hand. ',
                  '!status [game id] - show game status.',
                  '!show [game id] - show all game status, including hands'
                  'and deck, (op only command.);',
                  '!games - show active games in channel, and their states.', 
                  '!rules - show URL for Hanabi rules.', 
                  '----------------------',
-                 'Example !tell commands:', 
+                 'Example !hint commands:', 
                  'Tell nick frobozz that he/she has red cards in slot 2 3:',
-                 '!tell frobozz red 2 3',
+                 '!hint frobozz red 2 3',
                  'Tell nick xyzzy that he/she has the number 4 in slots 1 and 4', 
-                 '!tell xyzzy 4 1 2 3',
+                 '!hint xyzzy 4 1 2 3',
                  'Valid colors are red, blue, white, green, yellow. Valid ',
                  'numbers are 1, 2, 3, 4, and 5.']
         self._to_nick(event.source.nick, usage)
 
-    def handle_tell(self, args, event):
-        log.debug('got tell event. args: %s', args)
+    def handle_hint(self, args, event):
+        log.debug('got hint event. args: %s', args)
         nick = event.source.nick
 
         if len(args) < 3:
-            self._to_nick('bad !tell command. Must be of form !tell '
+            self._to_nick('bad !hint command. Must be of form !hint '
                           'nick color|number slotA, ... slotN')
             return
        
@@ -193,6 +197,7 @@ class Hanabot(SingleServerIRCBot):
             int(args[-1])
         except ValueError:
             game_name = args[-1]
+            args = args[:-1]
         else:
             game_name = None
 
@@ -201,11 +206,15 @@ class Hanabot(SingleServerIRCBot):
             self._to_nick(nick, 'Unable to find game.')
             return
         
-        cmd = args[1]
         try:
             cmd = int(args[1])
         except ValueError:
-            pass
+            try: 
+                cmd = str(args[1])
+            except ValueError:
+                self._to_nick(nick, 'The hint command must be a string (color) or'
+                                    ' an integer (card number).')
+                return
 
         # convert slot numbers into list of ints.
         # args: nick color|number slotA ... slotN
@@ -217,8 +226,8 @@ class Hanabot(SingleServerIRCBot):
                 self._to_nick('bad card slot value %s' % s)
                 return
 
-        # now tell the engine about the !tell
-        self._display(game.tell_player(nick, args[0], cmd, slots), nick)
+        # now hint the engine about the !hint
+        self._display(game.hint_player(nick, args[0], cmd, slots), nick)
 
 
     def handle_rules(self, args, event):
@@ -226,6 +235,9 @@ class Hanabot(SingleServerIRCBot):
         self._to_nick(event.source.nick, 'Go here for english rules: '
                       'http://boardgamegeek.com/filepage/59655/hanabi-'
                       'english-translation')
+
+    def handle_list(self, args, event):
+        self.handle_games(args, event)
 
     def handle_games(self, args, event):    
         log.debug('got games event. args: %s', args)
@@ -241,45 +253,71 @@ class Hanabot(SingleServerIRCBot):
             else:
                 turn = game.turn(event.source.nick)[0][0]
 
-            s = ('Game "%s": %s, %d players hanve joined. %s' %
+            s = ('Game "%s": %s, %d players have joined. %s' %
                  (self.markup.bold(name), state, len(game.players), turn))
             self._to_nick(nick, s)
 
-    def handle_play(self, args, event):
-        log.debug('got play event. args: %s', args)
+    def _get_game_and_slot(self, args, event):
         nick = event.source.nick
         if not (0 < len(args) < 3):
             self._to_nick(nick,'You must specify only a slot number (and '
                                'optionally a game id).')
-            return
+            return (None, None)
 
         game_name = args[1] if len(args) == 2 else None
         game = self._get_game(game_name, nick)
         if not game:
             self._to_nick(nick, 'Unable to find game.')
-            return
+            return (None, None)
 
         try:
             slot = int(args[0])
         except ValueError:
-            self._to_nick(nick, '!play slot must be an integer.')
-            return
+            self._to_nick(nick, 'Slot must be an integer.')
+            return (None, None)
 
         if not (0 < slot < 6):
-            self._to_nick(nick, '!play slot must be between 1 and 5.')
+            self._to_nick(nick, 'Slot must be between 1 and 5.')
+            return (None, None)
+
+        return game, slot
+
+    def handle_discard(self, args, event):
+        log.debug('got discard event. args: %s', args)
+        nick = event.source.nick
+        game, slot = self._get_game_and_slot(args, event)
+        if not game:
+            return
+
+        # discard the card and show the repsonse
+        self._display(game.discard_card(nick, slot), nick)
+
+        # discarding a card can trigger end game.
+        if game.game_over():
+            if game_name in self.games:
+                del self.games[game_name] 
+            elif len(self.games) == 1:   # GTL race condition here.
+                self.games = {}
+
+    def handle_play(self, args, event):
+        log.debug('got play event. args: %s', args)
+        nick = event.source.nick
+        game, slot = self._get_game_and_slot(args, event)
+        if not game:
             return
 
         # play the card and show the repsonse
         self._display(game.play_card(nick, slot), nick)
 
         # playing a card can trigger end game.
-        if g.game_over:
+        if game.game_over():
             if game_name in self.games:
                 del self.games[game_name] 
             elif len(self.games) == 1:   # GTL race condition here.
                 self.games = {}
-
-            # GTL: TODO there are other cases here. Find them.
+    
+    def handle_st(self, args, event):
+        self.handle_status(args, event)
 
     def handle_status(self, args, event):
         '''
@@ -328,12 +366,12 @@ class Hanabot(SingleServerIRCBot):
         '''args: [game]'''
         log.debug('got join event')
 
+        nick = event.source.nick
         if not len(self.games):
             self._to_nick(nick, 'There are no games going on! Start one with '
                           '!new [name]')
             return
 
-        nick = event.source.nick
         if len(args) == 0 and len(self.games) > 1:
             self._to_nick(nick, 'You must specify a game via "!join game" as '
                           'there is more than one game going on.')
@@ -403,15 +441,19 @@ class Hanabot(SingleServerIRCBot):
 
         self._display(game.start_game(nick), nick)
 
-    def handle_stop(self, args, event):
-        log.debug('got stop event')
+    def handle_delete(self, args, event):
+        log.debug('got delete event')
         nick = event.source.nick
         game_name = None if len(args) == 0 else args[0]
         game = self._get_game(game_name, nick)
         if not game:
             return
+       
+        if not game_name:
+            game_name = self.games.keys()[0]
 
-        self._display(game.stop_game(), nick)
+        del self.games[game_name]
+        self._to_chan('Game %s deleted.' % self.markup.bold(game_name))
 
     def _get_game(self, name, nick):
         '''Given the name, find the referenced game. The name can be None
