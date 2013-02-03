@@ -35,7 +35,8 @@ class Hanabot(SingleServerIRCBot):
 
         # valid bot commands
         self.commands = ['status', 'start', 'stop', 'join', 'new', 'leave',
-                         'move', 'help', 'play', 'turn', 'discard']
+                         'move', 'help', 'play', 'turn', 'discard', 'tell',
+                         'rules', 'games']
         self.admin_commands = ['die', 'show']
 
         # name ---> Game object dict
@@ -146,19 +147,103 @@ class Hanabot(SingleServerIRCBot):
     #############################################################
     def handle_help(self, args, event):
         log.debug('got help event. args: %s', args)
-        usage = ['All commands end optionally with a gameid.',
+        usage = ['Below is the list of commands used during a game of Hanabi',
+                 '. All commands end with an optional game id, used to ',
+                 ' identify which game you are referencing. (The bot supports',
+                 ' multiple, concurrent games. You do not need to give a game',
+                 'id if there is only one game in the channel. ',
+                 '------------',
                  'Your IRC client must display mIRC colors to play.',
                  '------------',
-                 '!new [gameid] - start a new game (named gameid, if given).',
-                 '!join [gameid] - join a game. If no gameid, join the single'
+                 '!new [game id] - start a new game (named game id, if given).',
+                 '!join [game id] - join a game. If no game id, join the single'
                  ' game running.',
-                 '!leave [gameid] - leave a game.',
-                 '!move slotA slotB [gameid] - within your hand move cards,',
-                 '!play slotN [gameid] - play a card to the table.',
-                 '!status [gameid] - show game status.',
-                 '!show [gameid] - show all game status, including hands'
-                 'and deck.']
-        self._to_nick(nick, usage)
+                 '!leave [game id] - leave a game.',
+                 '!move slotA slotB [game id] - move cards within your hand.', 
+                 '!play slotN [game id] - play a card to the table.',
+                 '!tell nick color|number slotA ... slotN - tell another ',
+                 'player which color or number cards are in their hand. ',
+                 '!status [game id] - show game status.',
+                 '!show [game id] - show all game status, including hands'
+                 'and deck, (op only command.);',
+                 '!games - show active games in channel, and their states.', 
+                 '!rules - show URL for Hanabi rules.', 
+                 '----------------------',
+                 'Example !tell commands:', 
+                 'Tell nick frobozz that he/she has red cards in slot 2 3:',
+                 '!tell frobozz red 2 3',
+                 'Tell nick xyzzy that he/she has the number 4 in slots 1 and 4', 
+                 '!tell xyzzy 4 1 2 3',
+                 'Valid colors are red, blue, white, green, yellow. Valid ',
+                 'numbers are 1, 2, 3, 4, and 5.']
+        self._to_nick(event.source.nick, usage)
+
+    def handle_tell(self, args, event):
+        log.debug('got tell event. args: %s', args)
+        nick = event.source.nick
+
+        if len(args) < 3:
+            self._to_nick('bad !tell command. Must be of form !tell '
+                          'nick color|number slotA, ... slotN')
+            return
+       
+        # tricky - must figure out if last arg is a game id or a 
+        # slot number.
+        try:
+            int(args[-1])
+        except ValueError:
+            game_name = args[-1]
+        else:
+            game_name = None
+
+        game = self._get_game(game_name, nick)
+        if not game:
+            self._to_nick(nick, 'Unable to find game.')
+            return
+        
+        cmd = args[1]
+        try:
+            cmd = int(args[1])
+        except ValueError:
+            pass
+
+        # convert slot numbers into list of ints.
+        # args: nick color|number slotA ... slotN
+        slots = list()
+        for s in args[2:]:
+            try:
+                slots.append(int(s))
+            except ValueError:
+                self._to_nick('bad card slot value %s' % s)
+                return
+
+        # now tell the engine about the !tell
+        self._display(game.tell_player(nick, args[0], cmd, slots), nick)
+
+
+    def handle_rules(self, args, event):
+        log.debug('got show rules event. args: %s', args)
+        self._to_nick(event.source.nick, 'Go here for english rules: '
+                      'http://boardgamegeek.com/filepage/59655/hanabi-'
+                      'english-translation')
+
+    def handle_games(self, args, event):    
+        log.debug('got games event. args: %s', args)
+        if not len(self.games):
+            self._to_nick(event.source.nick, 'No active games.')
+            return
+        
+        nick = event.source.nick
+        for name, game in self.games.iteritems():
+            state = 'being played' if game.has_started() else 'waiting for players'
+            if not game.has_started():
+                turn = ''
+            else:
+                turn = game.turn(event.source.nick)[0][0]
+
+            s = ('Game "%s": %s, %d players hanve joined. %s' %
+                 (self.markup.bold(name), state, len(game.players), turn))
+            self._to_nick(nick, s)
 
     def handle_play(self, args, event):
         log.debug('got play event. args: %s', args)
@@ -190,8 +275,8 @@ class Hanabot(SingleServerIRCBot):
         # playing a card can trigger end game.
         if g.game_over:
             if game_name in self.games:
-                del(self.games[game_name])
-            elif: len(self.games) == 1:   # GTL race condition here.
+                del self.games[game_name] 
+            elif len(self.games) == 1:   # GTL race condition here.
                 self.games = {}
 
             # GTL: TODO there are other cases here. Find them.
@@ -316,7 +401,7 @@ class Hanabot(SingleServerIRCBot):
         if not game:
             return
 
-        self._display(game.start_game(), nick)
+        self._display(game.start_game(nick), nick)
 
     def handle_stop(self, args, event):
         log.debug('got stop event')

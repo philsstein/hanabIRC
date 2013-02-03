@@ -175,104 +175,152 @@ class Game(object):
         self.max_players = 5
         self.name = name
         self.markup = markup
-        self.notes = ['w' for i in range(8)]
-        self.storms = ['O' for i in range(3)]
+
+        self.notes_up, self.notes_down = ('w', 'b')
+        self.notes = [self.notes_up for i in range(8)]
+        self.storms_up, self.storms_down = ('X', 'O')
+        self.storms = [self.storms_down for i in range(3)]
+        
         # The deck is Cards with color and count distributions shown, shuffled.
-        colors = [markup.RED, markup.WHITE, markup.BLUE, markup.GREEN,
+        self.colors = [markup.RED, markup.WHITE, markup.BLUE, markup.GREEN,
                   markup.YELLOW]
-        self.deck = [Card(c, n, self.markup) for c in colors
-                     for n in [1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5]]
+        self.card_distribution = [1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5]
+        self.deck = [Card(c, n, self.markup) for c in self.colors
+                     for n in self.card_distribution]
+
         random.shuffle(self.deck)
         self._playing = False
         self.game_over = False
 
         # table is a dict of lists of cards, indexed by color or use.
         self.table = {}
-        for c in colors:
+        for c in self.colors:
             self.table[c] = list()     # list of cards.
 
         self.discards = list()     # list of Cards
 
     def in_game(self, nick):
+        '''Return True is nick is in the game, False otherwise.'''
         return nick in self.players
-
-    def _flip(self, tokens, A, B):
-        '''flipthe first non A char token to the B token char. Return True
-        if no tokens found, False otherwise.'''
-        for i in xrange(len(tokens)):
-            if tokens[i] == A:
-                tokens[i] = B
-                if i == len(tokens)-1:
-                    return True
-
-                return False
-
-        return True
-
-    def _end_game(self):
-        score = sum([len(cs) for cs in self.table.values()])
-        self.game_over = True
-        self._playing = False
-        return (['The game is over. Final score is %d' % score],[])
-
-    def _is_valid_play(self, c):
-        if not len(self.table[c.color]):
-            if c.number == 1:
-                return True
-            else:
-                return False
-        else:
-            # if card is one greater than last number in color group
-            if self.table[c.color][-1].number + 1 == c.number:
-                return True
-            else:
-                return False
 
     def turn(self, nick):
         '''Tell the players whos turn it is.'''
-        return (['It is %s\'s turn to play.' % self.turn_order[0]], [])
+        t = 'N/A' if not self.turn_order else self.turn_order[0]
+        return (['It is %s\'s turn to play.' % t], [])
+
+    def has_started(self):
+        return self._playing
+
+    def players(self):
+        '''return a list of player ids in the game.'''
+        return self.players.keys()
 
     def discard_card(self, nick, i):
         '''Discard the card in slot i.'''
-        if self.turn_order[0] != nick:
-            return ([], ['It is not your turn. It is %s\'s turn.' % self.turn_order[0]])
+        pub, priv = [], []
+        if not self._in_game_is_turn(nick, priv):
+            return (pub, priv)
 
-        return (['discard not yet implemented'], [])
+        if not (0 < i < 6):
+            pub.append(['%s tried to discard card in slot %d, oops.' % (nick, i)])
+            priv.append(['card slots must be between 1 and 5 inclusive.'])
+            return (pub, priv)
+            
+        c = self.players[nick].hand.pop(i-1)
+        self.discard.append(c)
+        self.players[nick].hand.append(self.deck.pop(0))
+        self._flip(self.notes, self.notes_down, self.notes_up)
+        self.turn_order.append(self.turn_order.pop(0))
+        pub.append('It is now %s\'s turn in game %s.' %
+                   (self.turn_order[0], self.markup.bold(self.name)))
+
+        if self._is_game_over():
+            self._end_game(pub, priv)
+
+        return (pub, priv)    
 
     def play_card(self, nick, i):
         '''Have player "nick" play card in slot N from his/her hand.
         "i" is indexed by 1 (slot number) and must be between 1 and 5,
         The output is for group consumption.'''
         pub, priv = [], []
-        if not nick in self.players:
-            return priv.append('You are not in game %s.' % self.markup.bold(self.name))
-
-        if self.turn_order[0] != nick:
-            return ([], ['It is not your turn. It is %s\'s turn.' % self.turn_order[0]])
+        if not self._in_game_is_turn(nick, priv):
+            return (pub, priv)
 
         c = self.players[nick].hand.pop(i-1)
-        retVal = []
-        end_game = False
         if self._is_valid_play(c):
             self.table[c.color].append(c)
-            self.table[c.color].sort()   # GTL this is not really needed.
             pub.append('%s successfully added %s to the %s group.' %
                           (nick, str(c), c.color))
         else:
             pub.append('%s guessed wrong with %s! One storm token '
                           'flipped!' % (nick, str(c)))
-            end_game = self._flip(self.storms, 'O', 'X')
-            self.discards.append(c)
+            self._flip(self.storms, self.storms_down, self.storms_up)
+            self.discards.insert(0, c)
+
+        self.players[nick].hand.append(self.deck.pop())
+        pub.append('%s drew a new card from the deck.' % nick)
 
         self.turn_order.append(self.turn_order.pop(0))
+        pub.append('It is now %s\'s turn in game %s.' %
+                   (self.turn_order[0], self.markup.bold(self.name)))
 
-        if not len(self.deck) or end_game:
-            a, b = self._end_game()
-            pub += a
-            priv += b
-        else:
-            pub.append('%s drew a new card from the deck.' % nick)
-            self.players[nick].hand.append(self.deck.pop())
+        if self._is_game_over():
+            self._end_game(pub, priv)
+
+        return (pub, priv)
+
+    def tell_player(self, nick, other_nick, cmd, slots):
+        '''
+            tell_player: tell another player about thier hand.
+
+            nick: who is telling
+            other_nick: the tellee
+            cmd: can be one of: 
+                string: a valid color
+                int: a valid number (int)
+            slots: a list of card slots.
+
+            tell_player validates input.
+        '''
+        pub, priv = [], []
+        if not self._in_game_is_turn(nick, priv):
+            return (pub, priv)
+
+        pub = ['Invalid tell command still %s\'s turn.' % self.turn_order[0]]
+        if not other_nick in self.players:
+            priv.append('%s is not in this game %s' % (other_nick, self.name))
+            return (pub, priv)
+
+        if not isinstance(slots, list):
+            priv.append('I did not understand that tell command.')
+            return (pub, priv)
+
+        if isinstance(cmd, str) and not cmd in self.colors:
+            priv.append('%s is not a valid color. Valid colors are %s.' %
+                    ', '.join(self.colors))
+            return (pub, priv)
+
+        if isinstance(cmd, int) and not 0 < cmd < 6:
+            priv.append('numbers must be between 1 and 5 inclusive.')
+            return (pub, priv)
+
+        for s in slots:
+            if not 0 < s < 6:
+                priv.append('Slots must be between 1 and 5 inclusive.')
+                return (pub, priv)
+
+        # TODO: Do we want to actually validate the tell command?
+
+        # valid tell command, do the action.
+        pub = []
+        pub.append('%s: your hand contains a %s card in slots %s' %
+               (other_nick, cmd, ', '.join([str(s) for s in slots])))
+        self.turn_order.append(self.turn_order.pop(0))
+        pub.append('It is now %s\'s turn in game %s.' %
+                   (self.turn_order[0], self.markup.bold(self.name)))
+
+        self._flip(self.notes, self.notes_up, self.notes_down)
 
         return (pub, priv)
 
@@ -280,8 +328,8 @@ class Game(object):
         '''In nick's hand, move card from A to B slot. Assumes
         input is valid: 1 <= A,B <= 5. So caller should cleanse input.'''
         pub, priv = [], []
-        if not nick in self.players:
-            priv.append('You are not in game %s.' % self.markup.bold(self.name))
+        if not self._in_game_is_turn(nick, priv):
+            return (pub, priv)
 
         a, b =  self.players[nick].move_card(A, B)
         pub += a
@@ -372,30 +420,110 @@ class Game(object):
         pub, priv = [], []
         pub.append('Removing %s from game %s' % (nick, self.name))
         priv.append('You\'ve been removed from game %s.' % self.name)
-        pub.append('Putting %s\'s cards back in the'
-                      ' deck and reshuffling.' % nick)
+        pub.append('Putting %s\'s cards back in the' ' deck and reshuffling.' % nick)
         self.deck += self.players[nick].hand
         random.shuffle(self.deck)
-        self.players = {name: p for name, p in self.players.iteritems() if name != nick}
+        del self.players[nick]
 
-        if self.turn_order:
+        if self._playing:
             if nick == self.turn_order[0]:
                 pub.append('It is now %s\'s turn.' % self.turn_order[1])
        
-            self.turn_order = [p for p in self.turn_order if p != nick]
+            del self.turn_order[0]
 
         return (pub, priv)
 
-    def start_game(self):
+    def start_game(self, nick):
+        '''Start an existing game. Will fail if called by someone not in the game
+        or if there are not enough players.'''
         pub, priv = [], []
+        if not nick in self.players:
+            priv.append('You are not in game %s.' % self.markup.bold(self.name))
+            return (pub, priv)
+
+        if self._playing:
+            priv.append('Game %s has already begun.' % self.markup.bold(self.name))
+            return (pub, priv)
+
         if len(self.players) > 1:
             self._playing = True
-            pub.append('Game %s started!' % self.markup.bold(self.name))
+            pub.append('%s game with game id "%s" has begun!' %
+                       (self._rainbow('Hanabi'), self.markup.bold(self.name)))
             self.turn_order = random.sample(self.players.keys(), len(self.players))
         else:
             priv.append('There are not enough players in the game, not starting.')
         
+        pub.append('It is now %s\'s turn in game %s.' %
+                   (self.turn_order[0], self.markup.bold(self.name)))
         return (pub, priv)
+    #
+    # "private" methods below
+    #
+
+    def _rainbow(self, s):
+        '''Return a string in a rainbox of colors.'''
+        ret = ''
+        colors = [self.markup.RED, self.markup.WHITE, self.markup.BLUE,
+                  self.markup.GREEN, self.markup.YELLOW]
+        for i in range(len(s)):
+            ret += self.markup.color(s[i], colors[0])
+            colors.append(colors.pop(0))
+
+        return ret
+
+    def _flip(self, tokens, A, B):
+        '''flip the first non A char token to the B token char.'''
+        for i in xrange(len(tokens)):
+            if tokens[i] == A:
+                tokens[i] = B
+                return
+
+    def _is_game_over(self):
+        '''Return True is end game state is active.'''
+        if not len(self.deck):
+            return True
+        elif 25 == sum([len(cs) for cs in self.table.values()]):
+            return True
+        elif not self.storms_down in self.storms:
+            return True
+
+    def _end_game(self, pub, priv):
+        score = sum([len(cs) for cs in self.table.values()])
+        self.game_over = True
+        self._playing = False
+        pub += ['\n', '\n']
+        pub.append('Game %s is over. Final score is %d' % (self.name, score))
+        if score == 25:
+            pub.append('%s! It\'s a perfect game! 25 points!' % self._rainbow('Congratulations'))
+        pub += ['\n', '\n']
+
+    def _is_valid_play(self, c):
+        if not len(self.table[c.color]):
+            if c.number == 1:
+                return True
+            else:
+                return False
+        else:
+            # if card is one greater than last number in color group
+            if self.table[c.color][-1].number + 1 == c.number:
+                return True
+            else:
+                return False
+
+    def _in_game_is_turn(self, nick, priv):
+        '''Return True if the player is in the game and is his/her turn
+        else return False.'''
+        if not nick in self.players:
+            priv.append('You are not in game %s.' % self.markup.bold(self.name))
+            return False
+        elif not self._playing:
+            priv.append('The game %s has not yet started' % self.name)
+            return False
+        elif self.turn_order[0] != nick:
+            priv.append('It is not your turn. It is %s\'s turn.' % self.turn_order[0])
+            return False
+
+        return True
 
 if __name__ == "__main__":
     import doctest
