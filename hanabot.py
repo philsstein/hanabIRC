@@ -311,8 +311,8 @@ class Hanabot(SingleServerIRCBot):
 
         # discarding a card can trigger end game.
         if game.game_over():
-            if game_name in self.games:
-                del self.games[game_name] 
+            if game.name in self.games:
+                del self.games[game.name] 
             elif len(self.games) == 1:   # GTL race condition here.
                 self.games = {}
 
@@ -328,8 +328,8 @@ class Hanabot(SingleServerIRCBot):
 
         # playing a card can trigger end game.
         if game.game_over():
-            if game_name in self.games:
-                del self.games[game_name] 
+            if game.name in self.games:
+                del self.games[game.name] 
             elif len(self.games) == 1:   # GTL race condition here.
                 self.games = {}
     
