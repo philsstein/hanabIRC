@@ -152,11 +152,12 @@ class Hanabot(SingleServerIRCBot):
                  '. All commands end with an optional game id, used to ',
                  ' identify which game you are referencing. (The bot supports',
                  ' multiple, concurrent games. You do not need to give a game',
-                 'id if there is only one game in the channel. ',
+                 'id if there is only one game in the channel.)',
                  '------------',
                  'Your IRC client must display mIRC colors to play.',
                  '------------',
-                 '!new [game id] - start a new game (named game id, if given).',
+                 '!new [game id] - create a new game which people can join '
+                 '(named game id, if given).',
                  '!join [game id] - join a game. If no game id, join the single'
                  ' game running.',
                  '!start [game id] - start a game. The game must have at least '
@@ -166,7 +167,7 @@ class Hanabot(SingleServerIRCBot):
                  '!move slotA slotB [game id] - move cards within your hand.', 
                  '!play slotN [game id] - play a card to the table.',
                  '!hint nick color|number slotA ... slotN - give a hint to a'
-                 'player about which color or number cards are in their hand. ',
+                 ' player about which color or number cards are in their hand. ',
                  '!status [game id] - show game status.',
                  '!show [game id] - show all game status, including hands'
                  'and deck, (op only command.);',
@@ -176,7 +177,7 @@ class Hanabot(SingleServerIRCBot):
                  'Example !hint commands:', 
                  'Tell nick frobozz that he/she has red cards in slot 2 3:',
                  '!hint frobozz red 2 3',
-                 'Tell nick xyzzy that he/she has the number 4 in slots 1 and 4', 
+                 'Tell nick xyzzy that he/she has the number 4 in slots 1, 2, and 3 '
                  '!hint xyzzy 4 1 2 3',
                  'Valid colors are red, blue, white, green, yellow. Valid ',
                  'numbers are 1, 2, 3, 4, and 5.']
@@ -186,11 +187,11 @@ class Hanabot(SingleServerIRCBot):
         log.debug('got hint event. args: %s', args)
         nick = event.source.nick
 
-        if len(args) < 3:
-            self._to_nick('bad !hint command. Must be of form !hint '
+        if 1 < len(args) < 3:
+            self._to_nick(nick, 'bad !hint command. Must be of form !hint '
                           'nick color|number slotA, ... slotN')
             return
-       
+      
         # tricky - must figure out if last arg is a game id or a 
         # slot number.
         try:
@@ -205,7 +206,7 @@ class Hanabot(SingleServerIRCBot):
         if not game:
             self._to_nick(nick, 'Unable to find game.')
             return
-        
+       
         try:
             cmd = int(args[1])
         except ValueError:
@@ -254,7 +255,7 @@ class Hanabot(SingleServerIRCBot):
                 turn = game.turn(event.source.nick)[0][0]
 
             s = ('Game "%s": %s, %d players have joined. %s' %
-                 (self.markup.bold(name), state, len(game.players), turn))
+                 (self.markup.bold(name), state, len(game.players()), turn))
             self._to_nick(nick, s)
 
     def _get_game_and_slot(self, args, event):

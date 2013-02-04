@@ -25,9 +25,9 @@ display(g.start_game('Olive'))
 display(g.remove_player('Maisie'))
 
 # cheat and force Olive to have red: 12345 and Jasper tohave yellow 12345
-g.players['Olive'].hand = [Card(xterm_markup.RED, i+1, g.markup) for i in range(5)]
-g.players['Jasper'].hand = [Card(xterm_markup.YELLOW, i+1, g.markup) for i in range(5)]
-g.players['Frank'].hand = [Card(xterm_markup.GREEN, i+1, g.markup) for i in range(5)]
+g._players['Olive'].hand = [Card(xterm_markup.RED, i+1, g.markup) for i in range(5)]
+g._players['Jasper'].hand = [Card(xterm_markup.YELLOW, i+1, g.markup) for i in range(5)]
+g._players['Frank'].hand = [Card(xterm_markup.GREEN, i+1, g.markup) for i in range(5)]
 
 # force turn order
 g.turn_order = ['Olive', 'Jasper', 'Frank']
@@ -46,12 +46,12 @@ display(g.show_game_state())
 # in sequence.
 g = Game('winning_game', xterm_markup())
 [display(g.add_player('player %d' % i)) for i in range(1, 6, 1)]
-p1 = g.players[g.players.keys()[0]].name
+p1 = g._players[g._players.keys()[0]].name
 g.start_game(p1)
 print 'Turn order:', ', '.join(g.turn_order)
 colors = [xterm_markup.RED, xterm_markup.BLUE, xterm_markup.GREEN, 
           xterm_markup.WHITE, xterm_markup.YELLOW]
-for p in g.players.values():
+for p in g._players.values():
     p.hand = [Card(colors[0], i+1, g.markup) for i in range(5)]
     colors.append(colors.pop(0))
 
