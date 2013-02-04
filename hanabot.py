@@ -148,11 +148,18 @@ class Hanabot(SingleServerIRCBot):
     #############################################################
     def handle_help(self, args, event):
         log.debug('got help event. args: %s', args)
-        usage = ['Below is the list of commands used during a game of Hanabi',
-                 '. All commands end with an optional game id, used to ',
-                 ' identify which game you are referencing. (The bot supports',
-                 ' multiple, concurrent games. You do not need to give a game',
+        usage = ['Below is the list of commands used during a game of Hanabi'
+                 '. All commands end with an optional game id, used to '
+                 ' identify which game you are referencing. (The bot supports'
+                 ' multiple, concurrent games. You do not need to give a game'
                  'id if there is only one game in the channel.)',
+                 'A game is created via !new, then 2 to 5 people !join the '
+                 'game, and someone calls !start to start the game. Once '
+                 'started, the players take turns either !playing a card, '
+                 '!discarding a card, or giving another player a !hint. '
+                 'The game continues until the deck is empty, all the cards '
+                 'are correcly displayed on the table, or the three storm '
+                 'tokens have been flipped.', 
                  '------------',
                  'Your IRC client must display mIRC colors to play.',
                  '------------',
@@ -173,6 +180,7 @@ class Hanabot(SingleServerIRCBot):
                  'and deck, (op only command.);',
                  '!games - show active games in channel, and their states.', 
                  '!rules - show URL for Hanabi rules.', 
+                 '!help - show this message',
                  '----------------------',
                  'Example !hint commands:', 
                  'Tell nick frobozz that he/she has red cards in slot 2 3:',
@@ -250,12 +258,20 @@ class Hanabot(SingleServerIRCBot):
         for name, game in self.games.iteritems():
             state = 'being played' if game.has_started() else 'waiting for players'
             if not game.has_started():
-                turn = ''
+                if len(game.players()):
+                    ps = game.players()
+                    s = ('Game "%s": waiting for players. %d players have joined '
+                         'so far, %s.' % (self.markup.bold(name), len(ps), 
+                                         ', '.join(ps)))
+                else:
+                    s = ('Game "%s": waiting for players, no players have '
+                         'joined yet.' % self.markup.bold(name))
             else:
                 turn = game.turn(event.source.nick)[0][0]
+                s = ('Game "%s": being played by players %s. %s' %
+                     (self.markup.bold(name), ', '.join(game.players()), 
+                      turn))
 
-            s = ('Game "%s": %s, %d players have joined. %s' %
-                 (self.markup.bold(name), state, len(game.players()), turn))
             self._to_nick(nick, s)
 
     def _get_game_and_slot(self, args, event):

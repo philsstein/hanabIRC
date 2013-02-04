@@ -90,15 +90,40 @@ class Player(object):
     '''
     def __init__(self, name, hand, markup):
         self.name = str(name)
+        self.markup = markup    
+        # The player's hand, a list of Cards
         self.hand = hand
-        self.markup = markup
+        # The posistions of cards in hand, Displayed to the player
+        # so they can track cards by position in hand.
+        self.positions = ['A', 'B', 'C', 'D', 'E']
 
     def move_card(self, A, B):
-        '''move a card within a hand. output is for the group.'''
-        val = self.hand.pop(A-1)
-        self.hand.insert(B-1, val)
-        return ['%s moved card from slot %d to slot %d' %
-                (self.markup.bold(self.name), A, B)]
+        '''move a card within a hand. output is for the group. A and B
+        are 1-based index into the hand.'''
+        pub, priv = [], []
+        self.hand.insert(B-1, self.hand.pop(A-1))
+        self.positions.insert(B-1, self.positions.pop(A-1))
+        pub.append('%s moved card from slot %d to slot %d' %
+                    (self.markup.bold(self.name), A, B))
+        return pub, priv
+
+    def add_card(self, card):
+        '''Add a card to a player's hand. Use this method and not add to
+        player.hand directly. Only call when the player has less than 
+        hand limit cards, i.e. soon after calling player.get_card(). The
+        card is placed on the rightmost end of the hand, in slot 5.'''
+        self.hand.append(card)
+        # add the missing position card.
+        for p in ['A', 'B', 'C', 'D', 'E']:
+            if not p in self.positions:
+                self.positions.append(p)
+                break
+
+    def get_card(self, i):
+        '''Get the card at position i and remove it from the player's
+        hand. Hand is 1-based positioning.'''
+        self.positions.pop(i-1)
+        return self.hand.pop(i-1)
 
     def get_hand(self, hidden=False):
         '''return the hand as a string.'''
@@ -106,12 +131,8 @@ class Player(object):
             return '%s: %s' % (self.markup.bold(self.name),
                                ''.join([str(c) for c in self.hand]))
         else:
-            return str(self)
-
-    def __str__(self):
             return '%s: %s' % (self.markup.bold(self.name),
-                               ''.join(['?' for c in self.hand]))
-
+                               ''.join(self.positions))
 
 class Game(object):
     '''
@@ -229,10 +250,10 @@ class Game(object):
             priv.append(['card slots must be between 1 and 5 inclusive.'])
             return (pub, priv)
             
-        c = self._players[nick].hand.pop(i-1)
+        c = self._players[nick].get_card(i)
         pub.append('%s has discarded a %s' % (nick, str(c)))
         self.discards.append(c)
-        self._players[nick].hand.append(self.deck.pop(0))
+        self._players[nick].add_card(self.deck.pop(0))
         self._flip(self.notes, self.notes_down, self.notes_up)
         self.turn_order.append(self.turn_order.pop(0))
         pub.append('It is now %s\'s turn in game %s.' %
@@ -251,7 +272,7 @@ class Game(object):
         if not self._in_game_is_turn(nick, priv):
             return (pub, priv)
 
-        c = self._players[nick].hand.pop(i-1)
+        c = self._players[nick].get_card(i)
         if self._is_valid_play(c):
             self.table[c.color].append(c)
             pub.append('%s successfully added %s to the %s group.' %
@@ -262,7 +283,7 @@ class Game(object):
             self._flip(self.storms, self.storms_down, self.storms_up)
             self.discards.insert(0, c)
 
-        self._players[nick].hand.append(self.deck.pop())
+        self._players[nick].add_card(self.deck.pop())
         pub.append('%s drew a new card from the deck into slot 5.' % nick)
 
         self.turn_order.append(self.turn_order.pop(0))
@@ -349,9 +370,7 @@ class Game(object):
         if not self._in_game_is_turn(nick, priv):
             return (pub, priv)
 
-        a, b =  self._players[nick].move_card(A, B)
-        pub += a
-        priv += b
+        pub, priv = self._players[nick].move_card(A, B)
         return (pub, priv)
 
     def get_status(self, nick, show_all=False):
@@ -518,7 +537,7 @@ class Game(object):
         pub.append('Game %s is over. Final score is %d.' %
                    (self.markup.bold(self.name), score))
         if 0 <= score <= 5:
-            pub.append('Oh dear! The crowd booed')
+            pub.append('Oh dear! The crowd booed.')
         elif 6 <= score <= 10:
             pub.append('Poor! Hardly any applause.')
         elif 11 <= score <= 15:
