@@ -48,7 +48,6 @@ g = Game('winning_game', xterm_markup())
 [display(g.add_player('player %d' % i)) for i in range(1, 6, 1)]
 p1 = g._players[g._players.keys()[0]].name
 g.start_game(p1)
-print 'Turn order:', ', '.join(g.turn_order)
 colors = [xterm_markup.RED, xterm_markup.BLUE, xterm_markup.GREEN, 
           xterm_markup.WHITE, xterm_markup.YELLOW]
 for p in g._players.values():
@@ -62,3 +61,25 @@ for i in range(26):
         break
 
 display(g.show_game_state())
+
+# test losing game. Make game w/5 people
+# with hands of same color and in a row, then just play the hands
+# in bad sequence.
+g = Game('losing_game', xterm_markup())
+[display(g.add_player('player %d' % i)) for i in range(1, 6, 1)]
+p1 = g._players[g._players.keys()[0]].name
+g.start_game(p1)
+colors = [xterm_markup.RED, xterm_markup.BLUE, xterm_markup.GREEN, 
+          xterm_markup.WHITE, xterm_markup.YELLOW]
+for p in g._players.values():
+    p.hand = [Card(colors[0], i+1, g.markup) for i in range(5)]
+    colors.append(colors.pop(0))
+
+display(g.show_game_state())
+for i in range(5):
+    display(g.play_card(g.turn_order[0], 5))
+    if g._is_game_over():
+        break
+
+display(g.show_game_state())
+
