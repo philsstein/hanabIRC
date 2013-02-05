@@ -83,7 +83,7 @@ class Player(object):
     'OLIVE: ??????????'
     >>> p.get_hand(hidden=False)
     'OLIVE: r[1]r[1]r[2]r[3]r[4]b[1]b[1]b[2]b[3]b[4]'
-    >>> p.move_card(2, 3)
+    >>> p.swap_cards(2, 3)
     ['OLIVE moved card from slot 2 to slot 3']
     >>> p.get_hand(hidden=False)
     'OLIVE: r[1]r[2]r[1]r[3]r[4]b[1]b[1]b[2]b[3]b[4]'
@@ -97,13 +97,24 @@ class Player(object):
         # so they can track cards by position in hand.
         self.positions = ['A', 'B', 'C', 'D', 'E']
 
-    def move_card(self, A, B):
+    def swap_cards(self, A, B):
         '''move a card within a hand. output is for the group. A and B
         are 1-based index into the hand.'''
         pub, priv = [], []
-        self.hand.insert(B-1, self.hand.pop(A-1))
-        self.positions.insert(B-1, self.positions.pop(A-1))
-        pub.append('%s moved card from slot %d to slot %d' %
+        try:
+            A = int(A)
+            B = int(B)
+        except ValueError:
+            priv.append('!move args must be integers between 1 and 5.')
+            return pub, priv
+
+        if not (0 < A < 6) or not (0 < B < 6):
+            priv.append('!move args must be between 1 and 5.')
+            return pub, priv
+
+        self.hand[A-1], self.hand[B-1] = self.hand[B-1], self.hand[A-1]
+        self.positions[A-1], self.positions[B-1] = self.positions[B-1], self.positions[A-1]
+        pub.append('%s swapped cards in slots %d and slot %d' %
                     (self.markup.bold(self.name), A, B))
         return pub, priv
 
@@ -363,14 +374,14 @@ class Game(object):
 
         return (pub, priv)
 
-    def move_card(self, nick, A, B):
-        '''In nick's hand, move card from A to B slot. Assumes
-        input is valid: 1 <= A,B <= 5. So caller should cleanse input.'''
+    def swap_cards(self, nick, A, B):
+        '''In nick's hand, move card from A to B slot.'''
         pub, priv = [], []
-        if not self._in_game_is_turn(nick, priv):
+        if not nick in self._players.keys():
+            priv.append('You are not in game %s.' % self.markup.bold(self.name))
             return (pub, priv)
 
-        pub, priv = self._players[nick].move_card(A, B)
+        pub, priv = self._players[nick].swap_cards(A, B)
         return (pub, priv)
 
     def get_status(self, nick, show_all=False):
@@ -465,6 +476,12 @@ class Game(object):
         self.deck += self._players[nick].hand
         random.shuffle(self.deck)
         del self._players[nick]
+
+        if len(self._players) < 2:
+            pub.append('Stopping game %s as there are fewer than two people left in '
+                       'the game.' % self.markup.bold(self.name))
+            self._playing = False
+            self._game_over = True
 
         if self._playing:
             if nick == self.turn_order[0]:
