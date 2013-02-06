@@ -220,7 +220,7 @@ class Hanabot(SingleServerIRCBot):
         usage.append('!sort - sort your cards into "correct" order, i.e. into '
                      'ABCDE order from current mixed state.')
         usage.append('!move - move a card from slot A to slot B and slide all other'
-                     ' cards "right"'.)
+                     ' cards "right".')
         usage.append('--- Other ---')
         usage.append('!rules - show URL for Hanabi rules.')
         usage.append('!help - show this message')
@@ -491,7 +491,7 @@ class Hanabot(SingleServerIRCBot):
             return
 
         # and finally do the move.
-        self._display(game.move_cards(nick, args[0], args[1]), nick)
+        self._display(game.move_card(nick, args[0], args[1]), nick)
 
     def handle_swap(self, args, event):
         '''arg format: from_slot to_slot [game]'''
@@ -532,7 +532,8 @@ class Hanabot(SingleServerIRCBot):
             game_name = self.games.keys()[0]
 
         del self.games[game_name]
-        self._to_chan('Game %s deleted.' % self.markup.bold(game_name))
+        self._to_chan('%s deleted game %s.' % (
+            self.markup.bold(nick), self.markup.bold(game_name)))
 
     def _get_game(self, name, nick):
         '''Given the name, find the referenced game. The name can be None

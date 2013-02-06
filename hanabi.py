@@ -441,6 +441,16 @@ class Game(object):
         pub, priv = self._players[nick].sort_cards()
         return (pub, priv)
 
+    def move_card(self, nick, A, B):
+        '''In nick's hand, move card from A to B slot.'''
+        pub, priv = [], []
+        if not nick in self._players.keys():
+            priv.append('You are not in game %s.' % self.markup.bold(self.name))
+            return (pub, priv)
+
+        pub, priv = self._players[nick].move_cards(A, B)
+        return (pub, priv)
+
     def get_status(self, nick, show_all=False):
         '''Return game status for player, masking that player's cards.'''
         pub = []
