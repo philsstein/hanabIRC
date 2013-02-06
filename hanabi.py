@@ -118,6 +118,27 @@ class Player(object):
         return pub, priv
 
     def swap_cards(self, A, B):
+        '''swap a card within a hand. output is for the group. A and B
+        are 1-based index into the hand.'''
+        pub, priv = [], []
+        try:
+            A = int(A)
+            B = int(B)
+        except ValueError:
+            priv.append('!swap args must be integers between 1 and 5.')
+            return pub, priv
+
+        if not (0 < A < 6) or not (0 < B < 6):
+            priv.append('!swap args must be between 1 and 5.')
+            return pub, priv
+
+        self.hand[A-1], self.hand[B-1] = self.hand[B-1], self.hand[A-1]
+        self.positions[A-1], self.positions[B-1] = self.positions[B-1], self.positions[A-1]
+        pub.append('%s swapped cards in slots %d and slot %d' %
+                    (self.markup.bold(self.name), A, B))
+        return pub, priv
+
+    def move_cards(self, A, B):
         '''move a card within a hand. output is for the group. A and B
         are 1-based index into the hand.'''
         pub, priv = [], []
@@ -132,9 +153,10 @@ class Player(object):
             priv.append('!move args must be between 1 and 5.')
             return pub, priv
 
-        self.hand[A-1], self.hand[B-1] = self.hand[B-1], self.hand[A-1]
-        self.positions[A-1], self.positions[B-1] = self.positions[B-1], self.positions[A-1]
-        pub.append('%s swapped cards in slots %d and slot %d' %
+        self.hand.insert(B-1, self.hand.pop(A-1))
+        self.positions.insert(B-1, self.positions.pop(A-1))
+
+        pub.append('%s moved card from slot %s to slot %s' %
                     (self.markup.bold(self.name), A, B))
         return pub, priv
 

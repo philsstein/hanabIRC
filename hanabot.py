@@ -194,6 +194,7 @@ class Hanabot(SingleServerIRCBot):
                      'client does not support them, you may have a little '
                      'trouble playing.')
         usage.append('------- Commands ------')
+        usage.append('--- Game management ---')
         usage.append('!new [game id] - create a new game which people can join '
                      '(named "game id", if given. If not given a random name will '
                      'be assigned.')
@@ -203,18 +204,25 @@ class Hanabot(SingleServerIRCBot):
                      'two players.')
         usage.append('!delete [game id] - delete a game.')
         usage.append('!leave [game id] - leave a game. This is bad form.')
-        usage.append('!swap slotX slotY [game id] - swap cards within your hand '
-                     'from slotX to slotY. Other cards will slide right.')
+        usage.append('!games - show active games and their states.')
+        usage.append('!list - same as !games')
+        usage.append('!show [game id] - show all game status, including hands'
+                     ' and deck, (op only command.)')
+        usage.append('--- Playing the Game ---')
         usage.append('!play slotN [game id] - play a card to the table.')
         usage.append('!hint nick color|number A ... E - give a hint to a'
                      ' player about which color or number cards are in their hand. ')
         usage.append('!status [game id] - show game status.')
         usage.append('!st [game id] - same as !status')
-        usage.append('!games - show active games and their states.')
-        usage.append('!list - same as !games')
+        usage.append('--- Hand Management ---')
+        usage.append('!swap slotX slotY [game id] - swap cards within your hand '
+                     'from slotX to slotY. Other cards will slide right.')
+        usage.append('!sort - sort your cards into "correct" order, i.e. into '
+                     'ABCDE order from current mixed state.')
+        usage.append('!move - move a card from slot A to slot B and slide all other'
+                     ' cards "right"'.)
+        usage.append('--- Other ---')
         usage.append('!rules - show URL for Hanabi rules.')
-        usage.append('!show [game id] - show all game status, including hands'
-                     ' and deck, (op only command.)')
         usage.append('!help - show this message')
         usage.append('----------------------')
         usage.append('Example !hint commands:')
@@ -467,6 +475,23 @@ class Hanabot(SingleServerIRCBot):
 
         # and finally do the sort.
         self._display(game.sort_cards(nick), nick)
+
+    def handle_move(self, args, event):
+        '''arg format: from_slot to_slot [game]'''
+        log.debug('got handle_move event. args: %s', args)
+        nick = event.source.nick
+        if not (1 < len(args) < 4):
+            self._to_nick(nick,  'Error in move cmd. Should be !move slotX '
+                          'slotY [game]')
+            return
+
+        game_name = args[2] if len(args) == 3 else None
+        game = self._get_game(game_name, nick)
+        if not game:
+            return
+
+        # and finally do the move.
+        self._display(game.move_cards(nick, args[0], args[1]), nick)
 
     def handle_swap(self, args, event):
         '''arg format: from_slot to_slot [game]'''
