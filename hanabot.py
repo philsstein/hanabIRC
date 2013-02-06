@@ -39,7 +39,7 @@ class Hanabot(SingleServerIRCBot):
         # valid bot commands
         self.commands = ['status', 'start', 'delete', 'join', 'new', 'leave',
                          'swap', 'help', 'play', 'turn', 'discard', 'hint',
-                         'rules', 'games', 'list', 'st']
+                         'rules', 'games', 'list', 'st', 'sort', 'move']
         self.admin_commands = ['die', 'show']
 
         # name ---> Game object dict
@@ -67,7 +67,7 @@ class Hanabot(SingleServerIRCBot):
     # the simple answer may be to just not allow private msgs.
     def on_privmsg(self, conn, event):
         log.debug('got privmsg. %s -> %s', event.source, event.arguments)
-        # self.parse_commands(event, event.arguments)
+        self.on_pubmsg(event, event)
 
     def on_pubmsg(self, conn, event):
         try:
@@ -131,7 +131,7 @@ class Hanabot(SingleServerIRCBot):
                     'Error in file %s:%s in %s().' % (filename, line_num, func_name),
                     'Error text: %s' % text]
             self._to_chan('Does not compute. Unknown error happened. All bets are'
-                          ' off about game(s) state. Guru complation haiku:')
+                          ' off about game(s) state. Guru contemplation haiku:')
             for err in errs:
                 log.critical('%s', err)
                 self._to_chan(err)
@@ -143,10 +143,10 @@ class Hanabot(SingleServerIRCBot):
         output == (string list, string list).
         __display assumes you want to send to self.channel.'''
         for l in output[0]:
-            self.connection.notice(self.channel, l)
+            self.connection.privmsg(self.channel, l)
 
         for l in output[1]:
-            self.connection.notice(nick, l)
+            self.connection.privmsg(nick, l)
 
     # some sugar for sending msgs
     def _to_chan(self, msgs):
@@ -287,7 +287,7 @@ class Hanabot(SingleServerIRCBot):
     def handle_games(self, args, event):    
         log.debug('got games event. args: %s', args)
         if not len(self.games):
-            self._to_nick(event.source.nick, 'No active games.')
+            self._to_chan('No active games.')
             return
         
         nick = event.source.nick
@@ -308,7 +308,7 @@ class Hanabot(SingleServerIRCBot):
                      (self.markup.bold(name), ', '.join(game.players()), 
                       turn))
 
-            self._to_nick(nick, s)
+            self._to_chan(s)
 
     def _get_game_and_slot(self, args, event):
         nick = event.source.nick
@@ -451,6 +451,22 @@ class Hanabot(SingleServerIRCBot):
 
         # removing a player can trigger end game.
         self._end_game_check(game)
+
+    def handle_sort(self, args, event):
+        '''arg format: []'''
+        log.debug('got handle_sort event. args: %s', args)
+        nick = event.source.nick
+        if len(args):
+            self._to_nick(nick, 'Error in !sort cmd. Should be just !sort')
+            return
+
+        game_name = args[2] if len(args) == 3 else None
+        game = self._get_game(game_name, nick)
+        if not game:
+            return
+
+        # and finally do the sort.
+        self._display(game.sort_cards(nick), nick)
 
     def handle_swap(self, args, event):
         '''arg format: from_slot to_slot [game]'''

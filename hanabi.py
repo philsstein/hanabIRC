@@ -26,6 +26,7 @@
 '''
 import logging
 import random
+import string
 
 log = logging.getLogger(__name__)
 
@@ -77,8 +78,8 @@ class Player(object):
     >>> a = ascii_markup()
     >>> hand=[Card(c, n, a) for c in ['red', 'blue'] for n in [1, 1, 2, 3, 4]]
     >>> p = Player('Olive', hand, a)
-    >>> str(p)
-    'OLIVE: ??????????'
+    >>> p.get_hand('Olive')
+    'OLIVE: ABCDE
     >>> p.get_hand(hidden=True)
     'OLIVE: ??????????'
     >>> p.get_hand(hidden=False)
@@ -89,13 +90,32 @@ class Player(object):
     'OLIVE: r[1]r[2]r[1]r[3]r[4]b[1]b[1]b[2]b[3]b[4]'
     '''
     def __init__(self, name, hand, markup):
+        if len(hand) > len(string.uppercase):
+            raise Exception('Max hand size exceeded: %d. Max is %s' % (
+                len(hand), len(string.uppercase)))
+
         self.name = str(name)
         self.markup = markup    
         # The player's hand, a list of Cards
         self.hand = hand
         # The posistions of cards in hand, Displayed to the player
         # so they can track cards by position in hand.
-        self.positions = ['A', 'B', 'C', 'D', 'E']
+        # (support for more than 5 cards though it'll never be used.)
+        self.positions = [string.uppercase[i] for i in xrange(len(hand))]
+
+    def sort_cards(self):
+        '''resort the card into "orginal" positions.'''
+        # confusing and ugly, sorry.
+        # sort the zipped arrays by position, i.e. the strings 'A', 'B, etc.
+        tmp = zip(self.positions, self.hand)
+        tmp.sort(key=lambda x: x[0])        # sort by 'A', 'B', etc.
+        pos, hand = zip(*tmp)               # "unzip" the values
+        self.positions = list(pos)          # and put them back as lists.
+        self.hand = list(hand)
+
+        pub, priv = [], []
+        pub.append('%s sorted thier cards.' % self.name)
+        return pub, priv
 
     def swap_cards(self, A, B):
         '''move a card within a hand. output is for the group. A and B
@@ -288,6 +308,11 @@ class Game(object):
             self.table[c.color].append(c)
             pub.append('%s successfully added %s to the %s group.' %
                           (nick, str(c), c.color))
+            if len(self.table[c.color]) == 5:
+                pub.append('%s for finishing color: one note token flipped!' %
+                           self.markup.bold('Bonus'))
+                
+                self._flip(self.notes, self.notes_down, self.notes_up)
         else:
             pub.append('%s guessed wrong with %s! One storm token '
                           'flipped!' % (nick, str(c)))
@@ -382,6 +407,16 @@ class Game(object):
             return (pub, priv)
 
         pub, priv = self._players[nick].swap_cards(A, B)
+        return (pub, priv)
+
+    def sort_cards(self, nick):
+        '''In nick's hand, sort cards to "original" A-E order.'''
+        pub, priv = [], []
+        if not nick in self._players.keys():
+            priv.append('You are not in game %s.' % self.markup.bold(self.name))
+            return (pub, priv)
+
+        pub, priv = self._players[nick].sort_cards()
         return (pub, priv)
 
     def get_status(self, nick, show_all=False):
