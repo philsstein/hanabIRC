@@ -16,6 +16,7 @@ import random
 import sys
 import os
 import traceback
+from collections import defaultdict
 from hanabi import Game
 from text_markup import irc_markup
 from irc.bot import SingleServerIRCBot
@@ -93,6 +94,9 @@ class Hanabot(SingleServerIRCBot):
                       event.source.nick, event.target, event.arguments)
             nick = event.source.nick
 
+            if not cmds:
+                return ([], 'Giving a command would be more useful.')
+
             # I don't understand when args will ever be more than just a string of
             # space separated words - need more IRC lib experience or docs.
             cmds = [str(c) for c in cmds[0].split()]
@@ -167,73 +171,42 @@ class Hanabot(SingleServerIRCBot):
     #############################################################
     def handle_help(self, args, event):
         log.debug('got help event. args: %s', args)
-        usage = []
-        usage.append(
-            'Below is the list of commands used during a game of Hanabi'
-            '. All commands end with an optional game id, used to '
-            ' identify which game you are referencing. (The bot supports'
-            ' multiple, concurrent games. You do not need to give a game'
-            'id if there is only one game in the channel, however.)')
-        usage.append(
-            'A game is created via !new, then 2 to 5 people !join the '
-            'game, and someone calls !start to start the game. Once '
-            'started, the players take turns either !playing a card, '
-            '!discarding a card, or giving another player a !hint. '
-            'The game continues until the deck is empty, all the cards '
-            'are correcly displayed on the table, or the three storm '
-            'tokens have been flipped.')
-        usage.append(
-            'Use !status (or !st) to see the '
-            'current state of the table. You will see other player\'s '
-            ' hands, but your own hand will just display cards as positions '
-            'A, B, C, D, and E. Imagine those letters on the backs of '
-            'the cards. The order will change as you !play, !discard, and '
-            '!swap cards of course.')
-        usage.append('----------------------')
-        usage.append('Hanabot uses mIRC colors for the cards. So if your '
-                     'client does not support them, you may have a little '
-                     'trouble playing.')
-        usage.append('------- Commands ------')
-        usage.append('--- Game management ---')
-        usage.append('!new [game id] - create a new game which people can join '
-                     '(named "game id", if given. If not given a random name will '
-                     'be assigned.')
-        usage.append('!join [game id] - join a game. If no game id, join the single'
-                     'game running.')
-        usage.append('!start [game id] - start a game. The game must have at least '
-                     'two players.')
-        usage.append('!delete [game id] - delete a game.')
-        usage.append('!leave [game id] - leave a game. This is bad form.')
-        usage.append('!games - show active games and their states.')
-        usage.append('!list - same as !games')
-        usage.append('!show [game id] - show all game status, including hands'
-                     ' and deck, (op only command.)')
-        usage.append('--- Playing the Game ---')
-        usage.append('!play slotN [game id] - play a card to the table.')
-        usage.append('!hint nick color|number A ... E - give a hint to a'
-                     ' player about which color or number cards are in their hand. ')
-        usage.append('!status [game id] - show game status.')
-        usage.append('!st [game id] - same as !status')
-        usage.append('--- Hand Management ---')
-        usage.append('!swap slotX slotY [game id] - swap cards within your hand '
-                     'from slotX to slotY. Other cards will slide right.')
-        usage.append('!sort - sort your cards into "correct" order, i.e. into '
-                     'ABCDE order from current mixed state.')
-        usage.append('!move - move a card from slot A to slot B and slide all other'
-                     ' cards "right".')
-        usage.append('--- Other ---')
-        usage.append('!rules - show URL for Hanabi rules.')
-        usage.append('!help - show this message')
-        usage.append('----------------------')
-        usage.append('Example !hint commands:')
-        usage.append('Tell nick frobozz that he/she has red cards in slot B and C')
-        usage.append('!hint frobozz red B C')
-        usage.append('Tell nick xyzzy that he/she has the number 4 in slots A, B, and C')
-        usage.append('!hint xyzzy 4 A B C')
-        usage.append('Valid colors: red, blue, white, green, yellow.')
-        usage.append('Valid numbers: 1, 2, 3, 4, and 5.')
-        usage.append('Valid slots: A, B, C, D, and E.')
-        self._to_nick(event.source.nick, usage)
+        if not args:
+            usage = list()
+            usage.append(
+                'Below is the list of commands used during a game of Hanabi'
+                '. All commands end with an optional game id, used to '
+                ' identify which game you are referencing. (The bot supports'
+                ' multiple, concurrent games. You do not need to give a game'
+                'id if there is only one game in the channel, however.)')
+            usage.append(
+                'A game is created via !new, then 2 to 5 people !join the '
+                'game, and someone calls !start to start the game. Once '
+                'started, the players take turns either !playing a card, '
+                '!discarding a card, or giving another player a !hint. '
+                'The game continues until the deck is empty, all the cards '
+                'are correcly displayed on the table, or the three storm '
+                'tokens have been flipped.')
+            #usage.append(
+            #    'Use !status (or !st) to see the '
+            #    'current state of the table. You will see other player\'s '
+            #    ' hands, but your own hand will just display cards as positions '
+            #    'A, B, C, D, and E. Imagine those letters on the backs of '
+            #    'the cards. The order will change as you !play, !discard, and '
+            #    '!swap cards of course.')
+            #usage.append('----------------------')
+            #usage.append('Hanabot uses mIRC colors for the cards. So if your '
+            #             'client does not support them, you may have a little '
+            #             'trouble playing.')
+            usage.append('Valid commands are %s' % ', '.join(self.commands))
+            usage.append('Doing "!help [command]" will give details on that command.')
+            self._to_nick(event.source.nick, usage)
+            return
+
+        if args[0] in Hanabot._command_usage:
+            self._to_nick(event.source.nick, Hanabot._command_usage[args[0]])
+        else:
+            self._to_nick(event.source.nick, 'No help for topic %s' % args[0])
 
     def handle_hint(self, args, event):
         log.debug('got hint event. args: %s', args)
@@ -592,3 +565,23 @@ class Hanabot(SingleServerIRCBot):
                     yield '%s_%d' % (n, i)
             else:
                 i += 1
+
+    ####### static class data 
+    _command_usage = {
+        'new': '!new [game id] - create a new game which people can join (named "game id", if given. If not given a random name will be assigned.',
+        'join': '!join [game id] - join a game. If no game id, join the single game running.', 
+        'start': '!start [game id] - start a game. The game must have at least two players.',
+        'delete': '!delete [game id] - delete a game.', 
+        'leave': '!leave [game id] - leave a game. This is bad form.', 
+        'games': '!games - show active games and their states.', 
+        'list': '!list - same as !games, show active games and their states.',
+        'play': '!play slotN [game id] - play the card in slot N of your hand to the table.', 
+        'hint': '!hint nick color|number A ... E - give a hint to a player about which color or number cards are in their hand. Valid colors: red, blue, white, green, yellow; valid numbers and slots: 1, 2, 3, 4, and 5. Example "!hint frobozz blue 1 2 5" and "!hint xyzzy 1 3 4"',
+        'status': '!status [game id] - show game status. (shortcut !st works as well.)',
+        'st': '!status [game id] - show game status. (shortcut !st works as well.)',
+        'swap': '!swap slotX slotY [game id] - swap cards in slot X and slot Y within your hand.', 
+        'sort': '!sort - sort your cards into "correct" order, i.e. into ABCDE from "mixed" state.', 
+        'move': '!move - move a card from slot X to slot Y in your hand and slide all other cards "right".', 
+        'rules': '!rules - show URL for (english) Hanabi rules.', 
+        'help': 'show help'
+    }
