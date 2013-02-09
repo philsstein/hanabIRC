@@ -353,16 +353,15 @@ class Game(object):
 
         return (pub, priv)
 
-    def hint_player(self, nick, other_nick, cmd, slots):
+    def hint_player(self, nick, player, hint):
         '''
             hint_player: hint another player about thier hand.
 
             nick: who is hinting
-            other_nick: the hintee
-            cmd: can be one of: 
+            player: the hintee
+            hint: can be one of: 
                 string: a valid color
                 int: a valid number (int)
-            slots: a list of card slots.
 
             hint_player validates input.
         '''
@@ -370,33 +369,38 @@ class Game(object):
         if not self._in_game_is_turn(nick, priv):
             return (pub, priv)
 
-        pub.append('Invalid hint command still %s\'s turn.' % self.turn_order[0])
-        if not other_nick in self._players.keys():
-            priv.append('player %s is not in the game %s.' % (other_nick, self.name))
-            return (pub, priv)
-
-        if not isinstance(slots, list):
-            priv.append('I did not understand that hint command.')
-            return (pub, priv)
-
-        if isinstance(cmd, str):
-            if not cmd in self.colors:
-                # color the colors with thier own colors...
-                colors = [self.markup.color(c, c) for c in self.colors]
-                priv.append('%s is not a valid color. Valid colors are %s.' %
-                        (cmd, ', '.join(colors)))
+        try:
+            hint = int(hint)
+        except ValueError:
+            try: 
+                hint = str(hint)
+            except ValueError:
+                priv.append('The hint command must be a string (color) or '
+                            'an integer (card number). Valid colors are "white" or "w" '
+                            '"blue" or "b", "red" or "r", "green" or "g", or '
+                            '"yellow" or "y" (case insensitive.')
                 return (pub, priv)
-            else:
-                # color the color with its color.
-                cmd = self.markup.color(cmd, cmd)
-        elif isinstance(cmd, int) and not 0 < cmd < 6:
+
+        pub.append('Invalid hint command still %s\'s turn.' % self.turn_order[0])
+        if not player in self._players.keys():
+            priv.append('player %s is not in the game.' % (player, self.name))
+            return (pub, priv)
+
+        if isinstance(hint, str):
+            hint = hint.lower()
+            if not hint in self.colors or (
+                    len(hint) == 1 and not hint in [c[0] for c in self.colors]):
+                priv.append('%s is not a valid color. Valid colors are %s.' %
+                        (hint, ', '.join(self.colors)))
+                return (pub, priv)
+
+            # convert "?" into full color string.
+            if len(hint) == 1:
+                hint = [c for c in self.colors if c[0] == hint][0]
+
+        elif isinstance(hint, int) and not 0 < hint < 6:
             priv.append('numbers must be between 1 and 5 inclusive.')
             return (pub, priv)
-
-        for s in slots:
-            if not 0 < s < 6:
-                priv.append('Slots must be between 1 and 5 inclusive.')
-                return (pub, priv)
 
         # TODO: Do we want to actually validate the hint command?
         # if a lie, tell everyone that 'nick' is a dirty-low down
@@ -407,14 +411,17 @@ class Game(object):
         if not self.notes_up in self.notes:
             pub.append('Oh no! %s gave a hint when all notes were black '
                        'side down. ' % nick)
-            pub.append('Shame on them!')
+            pub.append('So, ya know, just disregard anything they said.')
+            return (pub, priv)
+
+        slots = self._get_slots(hint)
 
         plural = 's' if len(slots) > 1 else ''
         pub.append('%s: your hand contains a %s card in slot%s %s' %
-               (other_nick, str(cmd), plural,
-                ', '.join([str(s) for s in slots])))
+                   (player, str(hint), plural, 
+                    ', '.join([str(s) for s in slots])))
         self.turn_order.append(self.turn_order.pop(0))
-        pub.append('It is now %s\'s turn in game %s.' %
+        pub.append('It is now %s\'s turn.' %
                    (self.turn_order[0], self.markup.bold(self.name)))
 
         self._flip(self.notes, self.notes_up, self.notes_down)
@@ -425,7 +432,7 @@ class Game(object):
         '''In nick's hand, move card from A to B slot.'''
         pub, priv = [], []
         if not nick in self._players.keys():
-            priv.append('You are not in game %s.' % self.markup.bold(self.name))
+            priv.append('You are not in the game.' % self.markup.bold(self.name))
             return (pub, priv)
 
         pub, priv = self._players[nick].swap_cards(A, B)

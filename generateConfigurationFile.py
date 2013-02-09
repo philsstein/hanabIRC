@@ -20,6 +20,8 @@ if __name__ == "__main__":
     parser.set(section, 'channel', 'playhanabi')
     parser.set(section, 'port', '6667')
     parser.set(section, 'notify_channel', 'boardgames')
+    parser.set(section, 'nick', 'hanabot')
+    parser.set(section, 'nick_pass', 'Ih2ccomd!')
 
     if args.outfile:
         with open(args.outfile, 'wb') as fd:

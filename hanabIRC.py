@@ -47,6 +47,10 @@ if __name__ == "__main__":
                                                     'warning', 'error',
                                                     'critical'],
                            help='Set the global log level')
+    argparser.add_argument('-n', '--nick', help='Nick for the bot on IRC.')
+    argparser.add_argument('--nick_pass',
+                           help='Pasword for NickServ for the bot\'s nick.')
+
     argparser.add_argument('--config', type=str, dest='conffile',
                            help='Configuration file. Command line will '
                                 'override values found here.')
@@ -90,14 +94,18 @@ if __name__ == "__main__":
 
     server = confparse.get('general', 'server')
     channel = confparse.get('general', 'channel')
+    nick = confparse.get('general', 'nick')
+    nick_pass = confparse.get('general', 'nick_pass')
 
     server = args.server if args.server else server
     channel = args.channel if args.channel else channel
+    nick = args.nick if args.nick else nick
+    nick_pass = args.nick_pass if args.nick_pass else nick_pass
 
     # GTL - uncomment these once they are supported.
     # port = args.port if args.port else conf.port
     # notify_port = args.notify_port if args.notify_port else conf.notify_port
 
     # ok - now we can do some actual work.
-    bot = Hanabot(server, channel)
+    bot = Hanabot(server, channel, nick, nick_pass)
     bot.start()
