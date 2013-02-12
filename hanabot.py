@@ -16,8 +16,9 @@ import random
 import sys
 import os
 import traceback
+from collections import defaultdict
+
 from hanabi import Game
-from text_markup import irc_markup
 from irc.bot import SingleServerIRCBot
 from irc.client import VERSION as irc_client_version
 
@@ -41,15 +42,24 @@ class Hanabot(SingleServerIRCBot):
         self.channel = channel if channel[0] == '#' else '#%s' % channel
 
         # valid bot commands
-        self.commands = ['status', 'start', 'delete', 'join', 'new', 'leave',
-                         'swap', 'help', 'play', 'turn', 'discard', 'hint',
-                         'rules', 'game', 'st', 'sort', 'move', 'color']
-        self.admin_commands = ['die', 'show']
+        self.command_dict = {
+            'Game Management': ['new', 'delete', 'join', 'start', 'leave'],
+            'Hand Management': ['move', 'swap', 'sort'],
+            'Game Action': ['play', 'hint', 'discard'],
+            'Information': ['help', 'rules', 'turn', 'game', 'hands',
+                            'table', 'discardpile']
+        }
+        
+        self.commands = list()
+        for cmds in self.command_dict.values():
+            self.commands += cmds
+
+        self.commands_admin = ['die']
+
         # these commands can execute without an active game.
-        self.inactive_commands = ['new', 'help', 'rules', 'game']
+        self.no_game_commands = ['new', 'help', 'rules', 'game']
 
         self.game = None
-        self.markup = irc_markup()
 
     # lib IRC callbacks
     #############################################################
@@ -107,21 +117,17 @@ class Hanabot(SingleServerIRCBot):
             cmds = [str(c) for c in cmds[0].split()]
 
             # op only commands - return after executing.
-            if cmds[0] in self.admin_commands:
+            if cmds[0] in self.commands_admin:
                 log.debug('running admin cmd %s', cmds[0])
                 for chname, chobj in self.channels.items():
                     if nick in chobj.opers():
                         if cmds[0] == 'die':
                             self.die('Seppuku Successful')
-                        elif cmds[0] == 'show':
-                            for name, g in self.games.iteritems():
-                                log.debug('Showing state for game %s', name)
-                                self._display(g.show_game_state(), nick)
 
                         return
 
             # valid user command check
-            if not cmds[0] in self.commands or cmds[0] is not 'xyzzy':
+            if not cmds[0] in self.commands:
                 self._to_nick(nick, 'My dearest brother Willis, I do not '
                               'understand this "%s" of which you speak.' %
                               ' '.join(cmds))
@@ -130,10 +136,9 @@ class Hanabot(SingleServerIRCBot):
             # call the appropriate handle_* function.
             method = getattr(self, 'handle_%s' % cmds[0], None)
             if method:
-                if method not in self.inactive_commands:
-                    if not self.game:
-                        self._to_nick(nick, 'The game is not active! Start one with !new.')
-                        return
+                if not cmds[0] in self.no_game_commands and not self.game:
+                    self._to_nick(nick, 'The game is not active! Start one with !new.')
+                    return
                 
                 # invoke it!
                 method(cmds[1:], event)
@@ -185,16 +190,31 @@ class Hanabot(SingleServerIRCBot):
         if not args:
             usage = list()
             usage.append(
-                'Below is the list of commands used during a game of Hanabi.'
                 'A game is created via !new, then 2 to 5 people !join the '
                 'game, and someone calls !start to start the game. Once '
-                'started, the players take turns either !playing a card, '
+                'started, players take turns either !playing a card, '
                 '!discarding a card, or giving another player a !hint. '
-                'Players use !status (or !st) to view the state of the table. '
+                'After a valid !play or !discard the state of the '
+                'table is shown along with next turn ordering. (The table '
+                'state can also be seen with the !table command.')
+            usage.append(
+                'Players can use !hands to view all hands at the table, '
+                'including their own. Your own hand is shown with the "backs" '
+                'facing you. Each card is assigned a letter A-E and "tracks" as '
+                'the cards in your hand move around. You reference your own '
+                'hands via these letters, e.g. "!play C" or "!discard A"')
+            usage.append(
+                'Hints are given by the !hint command. The hint format '
+                'is "!hint nick color|number". Valid numbers are 1-5; '
+                'valid colors are white, yellow, red, blue, or green.'
+                ' Example: "!hint xyzzy blue" or "!hint fred 3"')
+            usage.append(
                 'The game continues until the deck is empty, all the cards '
                 'are correcly displayed on the table, or the three storm '
                 'tokens have been flipped.')
-            usage.append('Valid commands are %s' % ', '.join(self.commands))
+            for text, cmds in self.command_dict.iteritems():
+                usage.append('%s commands: %s' % (text, ', '.join(cmds)))
+
             usage.append('Doing "!help [command]" will give details on that command.')
             self._to_nick(event.source.nick, usage)
             return
@@ -206,30 +226,37 @@ class Hanabot(SingleServerIRCBot):
 
     def handle_hint(self, args, event):
         log.debug('got hint event. args: %s', args)
-        nick = event.source.nick
-        if len(args) != 2:
-            self._to_nick(nick, 'bad !hint command. Must be of form !hint '
-                                'nick color|number')
-            return
-      
+        if not self._check_args(args, 2, [str, str], event, 'hint'):
+            return 
+
         # now tell the engine about the !hint
-        self._display(game.hint_player(nick, player=args[0], hint=args[1]), nick)
+        nick = event.source.nick
+        self._display(self.game.hint_player(nick, player=args[0], hint=args[1]), nick)
 
     def handle_rules(self, args, event):
-        log.debug('got show rules event. args: %s', args)
+        log.debug('got rules event. args: %s', args)
+        if not self._check_args(args, 0, [], event, 'rules'):
+            return 
+
         self._to_nick(event.source.nick, 'Go here for english rules: '
                       'http://boardgamegeek.com/filepage/59655/hanabi-'
                       'english-translation')
 
     def handle_game(self, args, event):    
         log.debug('got game event. args: %s', args)
-        nick = event.source.nick
+        if not self._check_args(args, 0, [], event, 'game'):
+            return 
+
+        if not self.game:
+            self._to_chan('There is no game being played. Use !new to start one.')
+            return 
+
         state = 'being played' if self.game.has_started() else 'waiting for players'
         if not self.game.has_started():
             if len(self.game.players()):
-                ps = game.players()
+                ps = self.game.players()
                 s = ('Waiting for players. %d players have joined '
-                     'so far, %s.' % (len(ps), ', '.join(ps)))
+                     'so far: %s.' % (len(ps), ', '.join(ps)))
             else:
                 s = ('Waiting for players, no players have '
                      'joined yet.')
@@ -240,44 +267,53 @@ class Hanabot(SingleServerIRCBot):
 
         self._to_chan(s)
 
-    def _check_game_and_card(self, nick, args, cmd):
-        valid_cards = ['A', 'B', 'C', 'D', 'E']
-        if len(args) != 1 or len(args[0]) != 1 or not args[0] in valid_cards:
-            cmd_err = ('Error in !%s command. Must be of form "!%s letter" '
-                       'where the letter one of %s' % (cmd, ', '.join(valid_cards)))
-            self._to_nick(nick, cmd_err)
-            return False
+    def handle_turn(self, args, event):
+        if not self._check_args(args, 0, [], event, 'turn'):
+            return 
 
-        return True
+        self._display(self.game.turn(event.source.nick), event.source.nick)
+
+    def handle_table(self, args, event):
+        log.debug('got table command.')
+        if not self._check_args(args, 0, [], event, 'table'):
+            return 
+
+        self._display(self.game.get_table(), event.source.nick)
 
     def handle_discard(self, args, event):
         log.debug('got discard event. args: %s', args)
-        if self._check_game_and_card(event.source.nick, args, 'discard'):
-            # discard the card and show the repsonse
-            self._display(game.discard_card(nick, slot), nick)
+        if not self._check_args(args, 1, [str], event, 'discard'):
+            return 
 
-            # discarding a card can trigger end game.
-            if self.game.game_over()
-                self.game = None 
+        # discard the card and show the repsonse
+        nick = event.source.nick
+        self._display(self.game.discard_card(nick, args[0]), nick)
+
+        # discarding a card can trigger end game.
+        if self.game.game_over():
+            self.game = None 
 
     def handle_play(self, args, event):
         log.debug('got play event. args: %s', args)
-        if self._check_game_and_card(event.source.nick, args, cmd, 'play'):
-            # play the card and show the repsonse
-            self._display(game.play_card(nick, slot), nick)
+        # play the card and show the repsonse
+        if not self._check_args(args, 1, [str], event, 'play'):
+            return 
 
-            # playing a card can trigger end game.
-            if self.game.game_over()
-                self.game = None 
-    
-    def handle_st(self, args, event):
-        self.handle_status(args, event)
-
-    def handle_status(self, args, event):
-        ''' Show status of current game.  '''
-        log.debug('got status event. args: %s', args)
         nick = event.source.nick
-        self._display(self.game.get_status(nick), nick)
+        self._display(self.game.play_card(nick, args[0]), nick)
+
+        # playing a card can trigger end game.
+        if self.game.game_over():
+            self.game = None 
+    
+    def handle_hands(self, args, event):
+        ''' Show hands of current game.  '''
+        log.debug('got hands event. args: %s', args)
+        if not self._check_args(args, 0, [], event, 'hands'):
+            return 
+
+        nick = event.source.nick
+        self._display(self.game.get_hands(nick), nick)
 
     def handle_xyzzy(self, args, event):
         self._to_nick(event.source.nick, 'Nothing happens.')
@@ -285,27 +321,35 @@ class Hanabot(SingleServerIRCBot):
     def handle_new(self, args, event):
         ''' Create a new game. '''
         log.debug('got new game event')
+        if not self._check_args(args, 0, [], event, 'new'):
+            return 
+
         nick = event.source.nick
         if self.game:
-            self._to_nick(nick. 'There is already an active game in the channel.')
+            self._to_nick(nick, 'There is already an active game in the channel.')
             return 
         
         log.info('Starting new game.')
-        self.game = Game(self.markup)
-        pub = ['New game started by %s. Accepting joins.' % self.markup.bold(nick))]
+        self.game = Game()
+        pub = ['New game started by %s. Accepting joins.' % nick]
         self._display((pub, []))
 
     def handle_join(self, args, event):
         '''join a game, if one is active.'''
         log.debug('got join event')
+        if not self._check_args(args, 0, [], event, 'join'):
+            return 
+
         nick = event.source.nick
+        self._display(self.game.add_player(nick), nick)
 
-        self._display(self.game.add_player(event.source.nick), nick)
-
-    # GTL TODO: make sure this is called when the players leaves the channel
+    # GTL TODO: make sure this is called when the players leaves the channel?
     def handle_leave(self, args, event):
         '''leave an active game.'''
         log.debug('got leave event. args: %s', args)
+        if not self._check_args(args, 0, [], event, 'leave'):
+            return 
+
         nick = event.source.nick
         # remove the player and display the result
         self._display(self.game.remove_player(nick), nick)
@@ -317,64 +361,97 @@ class Hanabot(SingleServerIRCBot):
     def handle_sort(self, args, event):
         '''arg format: []'''
         log.debug('got handle_sort event. args: %s', args)
-        nick = event.source.nick
-        if len(args) > 1:
-            self._to_nick(nick, '(Ignoring extra arguments to !sort.)')
+        if not self._check_args(args, 0, [], event, 'sort'):
+            return 
 
-        self._display(game.sort_cards(nick), nick)
+        nick = event.source.nick
+        self._display(self.game.sort_cards(nick), nick)
 
     def handle_move(self, args, event):
-        '''arg format: from_slot to_slot'''
+        '''arg format: cardX slotN.'''
         log.debug('got handle_move event. args: %s', args)
-        nick = event.source.nick
-        if len(args) != 2:
-            self._to_nick(nick, 'Error in move cmd. Should be "!move slotX '
-                          'slotY" where the slots are one of A, B, C, D, E.')
-            return
+        if not self._check_args(args, 2, [str, int], event, 'move'):
+            return 
 
-        self._display(game.move_card(nick, args[0], args[1]), nick)
+        nick = event.source.nick
+        self._display(self.game.move_card(nick, args[0], args[1]), nick)
 
     def handle_swap(self, args, event):
-        '''arg format: from_slot to_slot [game]'''
+        '''arg format: cardA cardB.'''
         log.debug('got handle_swap event. args: %s', args)
-        nick = event.source.nick
-        if len(args) != 2:
-            self._to_nick(nick, 'Error in swap cmd. Should be "!move slotX '
-                          'slotY" where the slots are one of A, B, C, D, E.')
-            return
+        if not self._check_args(args, 2, [str, str], event, 'swap'):
+            return 
 
         # do the swap
-        self._display(game.swap_cards(nick, args[0], args[1]), nick)
+        nick = event.source.nick
+        self._display(self.game.swap_cards(nick, args[0], args[1]), nick)
 
     def handle_start(self, args, event):
         log.debug('got start event')
+        if not self._check_args(args, 0, [], event, 'start'):
+            return 
+
+        nick = event.source.nick
         self._display(self.game.start_game(nick), nick)
 
     def handle_delete(self, args, event):
         log.debug('got delete event')
-        self.game = None
-        self._to_chan('%s deleted game.' % (self.markup.bold(event.source.nick)))
+        if not self._check_args(args, 0, [], event, 'delete'):
+            return 
 
-    def handle_color(self, args, event):
+        self.game = None
+        self._to_chan('%s deleted game.' % event.source.nick)
+
+    def handle_discardpile(self, args, event):
+        log.debug('got discardpile event')
+        if not self._check_args(args, 0, [], event, 'discardpile'):
+            return 
+
         nick = event.source.nick
-        pass   # GTL finish this.
-                        
+        self._display(self.game.get_discard_pile(), nick)
+
+    def _check_args(self, args, num, types, event, cmd):
+        '''Check the given arguments for correct types and number. Show error
+        message and help to nick on error and return False. Else return True. 
+        As a side effect, set the types correctly. e.g. "1.2" is set to 1.2.'''
+        if len(args) != num:
+            self._to_nick(event.source.nick, 'Wrong number of arguments to %s' % cmd)
+            self.handle_help([cmd], event)
+            return False
+        elif len(types) != num:
+            # This is an internal callee error, so no message. 
+            log.info('internal error in _check_args: wrong number of types passed in.')
+            return False
+
+        for i in xrange(len(args)):
+            try:
+                args[i] = types[i](args[i])
+            except ValueError:
+                self._to_nick(event.source.nick, 'Wrong type for argument %s in command %s.' % (args[i], cmd))
+                self.handle_help([cmd], event)
+                return False
+
+        return True
+
     ####### static class data 
     _command_usage = {
-        'new': '!new - create a new game which people can join (named "game id", if given. If not given a random name will be assigned.',
-        'join': '!join - join a game. If no game id, join the single game running.', 
-        'start': '!start - start a game. The game must have at least two players.',
+        'new': '!new - create a new game which people can join. One game per channel.',
         'delete': '!delete - delete a game.', 
+        'join': '!join - join a game. If not game in channel, use !new to create one.', 
+        'start': '!start - start a game. The game must have at least two players.',
         'leave': '!leave - leave a game. This is bad form.', 
-        'game': '!game - show the game state.', 
-        'play': '!play card - play the card to the table. "card" is positional and must be one of A, B, C, D, or E.', 
+        'move': '!move card - move a card in your hand and slide all other cards "right". "card" must be one of A, B, C, D, or E. "index" is where to put the card, counting from the left and must be an integer between 1 and max hand size.',
+        'swap': '!swap card card - swap cards in your hand. Card arguments must be one of A, B, C, D, or E.',
+        'sort': '!sort - sort your cards into "correct" order, i.e. into ABCDE order from "mixed" state.', 
+        'play': '!play card - play the card to the table. "card" must be one of A, B, C, D, or E.', 
         'hint': '!hint nick color|number - give a hint to a player about which color or number cards are in their hand. Valid colors: red, blue, white, green, yellow (or r, b, w, g, y) (case insensitive); valid numbers are 1, 2, 3, 4, or 5. Example "!hint frobozz blue" and "!hint plugh 4"',
-        'status': '!status - show game status. (shortcut !st works as well.)',
-        'st': '!status - show game status. (shortcut !st works as well.)',
-        'swap': '!swap card card - swap cards in your hand. Card arguments are positional and must be one of A, B, C, D, or E.',
-        'sort': '!sort - sort your cards into "correct" order, i.e. into ABCDE from "mixed" state.', 
-        'move': '!move card - move a card in your hand and slide all other cards "right". "card" is positional and must be one of A, B, C, D, or E.',
-        'color': '!color - toggle using color in hanabot output. Useful if you\'ve got color turned off or your client does not understand mIRC color codes.',
+        'discard': '!discard card - place a card in the discard pile. "card" must be one of A, B, C, D, or E.', 
+        'help': 'Infinite recursion detected. Universe is rebooting...',
         'rules': '!rules - show URL for (english) Hanabi rules.', 
-        'help': 'show help'
+        'turn': '!turn - show which players turn it is.', 
+        'game': '!game - show the game state.', 
+        'hands': '!hands - show hands of players. Your own hand will be shown with the "backs" facing you, identified individually by a letter. When a card is removed the letter is reused for the new card.',
+        'table': '!game - show the state of the table', 
+        'discardpile': '!discardpile - show the current discard pile.',
+        'grue': 'You are likely to be eaten.',
     }

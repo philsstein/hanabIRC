@@ -140,7 +140,7 @@ class ascii_markup(text_markup_base):
         >>> from text_markup import ascii_markup as markup
         >>> m = markup()
         >>> m.color('hello', m.RED)
-        'r[hello]'
+        'Rhello'
         >>> m.markup('hello', m.BOLD)
         'HELLO'
         >>> m.color('hello', 'purple')
@@ -153,11 +153,11 @@ class ascii_markup(text_markup_base):
         text_markup_exception: 'Unknown markup: underlined'
         '''
     _colormap = {
-        text_markup_base.WHITE: 'w',
-        text_markup_base.BLUE: 'b',
-        text_markup_base.GREEN: 'g',
-        text_markup_base.RED: 'r',
-        text_markup_base.YELLOW: 'y'
+        text_markup_base.WHITE: 'W',
+        text_markup_base.BLUE: 'B',
+        text_markup_base.GREEN: 'G',
+        text_markup_base.RED: 'R',
+        text_markup_base.YELLOW: 'Y'
     }
 
     def __init__(self):
@@ -172,7 +172,7 @@ class ascii_markup(text_markup_base):
 
     def color(self, text, color):
         text_markup_base.color(self, text, color)
-        return '%s[%s]' % (ascii_markup._colormap[color], text)
+        return '%s%s' % (ascii_markup._colormap[color], text)
 
 
 if __name__ == "__main__":

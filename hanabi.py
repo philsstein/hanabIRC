@@ -27,84 +27,43 @@
 import logging
 import random
 import string
+from collections import defaultdict
 
 log = logging.getLogger(__name__)
 
-
 class Card(object):
     '''
-    Card has a color and a number and uses a markup object instance
-    to print the color and number approipriately. The color must be
-    supported by the markup instance.
-
-    Example:
-    >>> from text_markup import ascii_markup
-    >>> a = ascii_markup()
-    >>> c = Card(ascii_markup.RED, 4, a)
-    >>> str(c)
-    'r[4]'
-    >>> c = Card('blue', 1, a)
-    >>> str(c)
-    'b[1]'
-    >>> c = Card('purple', 1, a)
-    Traceback (most recent call last):
-        ...
-    text_markup_exception: 'Unknown color: purple'
+    Card has a color and a number.
     '''
-    def __init__(self, color, number, markup):
-        self.markup = markup
+    def __init__(self, color, number):
         self.color = color
         self.number = number
 
-        # if color is bad, this will raise an exception.
-        self.markup.color('hello', self.color)
-
     def __str__(self):
-        return '%s' % self.markup.color('%d' % self.number, self.color)
+        return '%s%d' % (self.color[0].upper(), self.number)
 
 
 class Player(object):
     '''
-    Player has a name and a hand and uses a markup instance to print
-    player information appropriately.
+        If the player themselves is requesting to see the hand, they get
+        an opaque hand. If anyone else wants to see it, they see it all.
 
-    If the player themselves is requesting to see the hand, they get
-    an opaque hand. If anyone else wants to see it, they see it all.
-
-    Players can modify the order of cards in their own hands as well.
-
-    example:
-    >>> from text_markup import ascii_markup
-    >>> a = ascii_markup()
-    >>> hand=[Card(c, n, a) for c in ['red', 'blue'] for n in [1, 1, 2, 3, 4]]
-    >>> p = Player('Olive', hand, a)
-    >>> p.get_hand('Olive')
-    'OLIVE: ABCDE
-    >>> p.get_hand(hidden=True)
-    'OLIVE: ??????????'
-    >>> p.get_hand(hidden=False)
-    'OLIVE: r[1]r[1]r[2]r[3]r[4]b[1]b[1]b[2]b[3]b[4]'
-    >>> p.swap_cards(2, 3)
-    ['OLIVE moved card from slot 2 to slot 3']
-    >>> p.get_hand(hidden=False)
-    'OLIVE: r[1]r[2]r[1]r[3]r[4]b[1]b[1]b[2]b[3]b[4]'
+        Players can modify the order of cards in their own hands as well.
     '''
-    def __init__(self, name, hand, markup):
-        if len(hand) > len(string.uppercase):
-            raise Exception('Max hand size exceeded: %d. Max is %s' % (
-                len(hand), len(string.uppercase)))
-
+    def __init__(self, name):
         self.name = str(name)
-        self.markup = markup    
         # The player's hand, a list of Cards
-        self.hand = hand
+        self.hand = None
         # The posistions of cards in hand, Displayed to the player
         # so they can track cards by position in hand.
         # (support for more than 5 cards though it'll never be used.)
-        self.positions = [string.uppercase[i] for i in xrange(len(hand))]
+        self.positions = None
 
     def sort_cards(self):
-        '''resort the card into "orginal" positions.'''
+        '''
+        re-sort the card into "orginal" positions.
+
+        '''
         # confusing and ugly, sorry.
         # sort the zipped arrays by position, i.e. the strings 'A', 'B, etc.
         tmp = zip(self.positions, self.hand)
@@ -114,78 +73,80 @@ class Player(object):
         self.hand = list(hand)
 
         pub, priv = [], []
-        pub.append('%s sorted thier cards.' % self.name)
+        pub.append('Your cards have been sorted.')
         return pub, priv
 
     def swap_cards(self, A, B):
         '''swap a card within a hand. output is for the group. A and B
-        are 1-based index into the hand.'''
+        are the position-based index of the cards.'''
         pub, priv = [], []
-        try:
-            A = int(A)
-            B = int(B)
-        except ValueError:
-            priv.append('!swap args must be integers between 1 and 5.')
+        A, B, = A.upper(), B.upper()
+        if not A in self.positions or not B in self.positions:
+            priv.append('!swap card argument must be one of %s' %
+                        sorted(', '.join(self.positions)))
             return pub, priv
 
-        if not (0 < A < 6) or not (0 < B < 6):
-            priv.append('!swap args must be between 1 and 5.')
-            return pub, priv
-
-        self.hand[A-1], self.hand[B-1] = self.hand[B-1], self.hand[A-1]
-        self.positions[A-1], self.positions[B-1] = self.positions[B-1], self.positions[A-1]
-        pub.append('%s swapped cards in slots %d and slot %d' %
-                    (self.markup.bold(self.name), A, B))
+        i, j = self.positions.index(A), self.positions.index(B)
+        self.hand[i], self.hand[j] = self.hand[j], self.hand[i]
+        self.positions[i], self.positions[j] = self.positions[j], self.positions[i]
+        priv.append('Swapped cards %s and %s' % (A, B))
         return pub, priv
 
-    def move_cards(self, A, B):
-        '''move a card within a hand. output is for the group. A and B
-        are 1-based index into the hand.'''
+    def move_card(self, A, i):
+        '''swap a card within a hand. A is the card, i is the 1-based index or where
+        to put it within the hand.'''
         pub, priv = [], []
         try:
-            A = int(A)
-            B = int(B)
+            i = int(i)
         except ValueError:
-            priv.append('!move args must be integers between 1 and 5.')
+            priv.append('move index arugment must be an integer.')
             return pub, priv
 
-        if not (0 < A < 6) or not (0 < B < 6):
-            priv.append('!move args must be between 1 and 5.')
+        if not (1 <= i <= len(self.positions)):
+            priv.append('move index argument must between 1 and %d' % len(self.positions))
             return pub, priv
 
-        self.hand.insert(B-1, self.hand.pop(A-1))
-        self.positions.insert(B-1, self.positions.pop(A-1))
+        A = A.upper()
+        if not A in self.positions:
+            priv.append('move card argument must be one of %s' %
+                        ', '.join(sorted(self.positions)))
+            return pub, priv
 
-        pub.append('%s moved card from slot %s to slot %s' %
-                    (self.markup.bold(self.name), A, B))
+        self.hand.insert(i-1, self.hand.pop(self.positions.index(A)))
+        self.positions.insert(i-1, self.positions.pop(self.positions.index(A)))
+        priv.append('Moved card %s to position %d.' % (A, i))
         return pub, priv
 
-    def add_card(self, card):
+    def get_hand(self, hidden=False):
+        '''return the hand as a string.'''
+        if not self.hand:
+            return 'No hands dealt yet.'
+
+        if not hidden:
+            return '%s: %s' % (self.name, ' '.join([str(c) for c in self.hand]))
+        else:
+            return '%s: %s' % (self.name, ' '.join(self.positions))
+
+    def _add_card(self, card):
         '''Add a card to a player's hand. Use this method and not add to
         player.hand directly. Only call when the player has less than 
-        hand limit cards, i.e. soon after calling player.get_card(). The
+        hand limit cards, i.e. soon after calling player._get_card(). The
         card is placed on the rightmost end of the hand, in slot 5.'''
+        # simply append the card
         self.hand.append(card)
-        # add the missing position card.
-        for p in ['A', 'B', 'C', 'D', 'E']:
+
+        # find the missing position card and add it.
+        for p in [string.uppercase[i] for i in xrange(len(self.hand))]:
             if not p in self.positions:
                 self.positions.append(p)
                 break
 
-    def get_card(self, i):
-        '''Get the card at position i and remove it from the player's
-        hand. Hand is 1-based positioning.'''
-        self.positions.pop(i-1)
-        return self.hand.pop(i-1)
-
-    def get_hand(self, hidden=False):
-        '''return the hand as a string.'''
-        if not hidden:
-            return '%s: %s' % (self.markup.bold(self.name),
-                               ''.join([str(c) for c in self.hand]))
-        else:
-            return '%s: %s' % (self.markup.bold(self.name),
-                               ''.join(self.positions))
+    def _get_card(self, X):
+        '''Get the card at position X and remove it from the player's
+        hand. Hand is the card ID. X must be valid.'''
+        i = self.positions.index(X.upper())
+        self.positions.pop(i)
+        return self.hand.pop(i)
 
 class Game(object):
     '''
@@ -205,50 +166,20 @@ class Game(object):
         evaluate the statements correctly as the cards change everytime.
 
         Example:
-        >>> def display(pub, priv):
-        ...     for d in [('public:', pub), ('private:', priv)]:
-        ...             print d[0]
-        ...             for l in d[1]:
-        ...                     print l
-        >>> from text_markup import ascii_markup
-        >>> g = Game('foobar', ascii_markup())
-        >>> g.start_game()
-        ['There are not enough players in the game, not starting.']
-        >>> g.add_player('Olive')
-        ['Olive has joined game foobar']
-        >>> g.add_player('Maisie')
-        ['Maisie has joined game foobar']
-        >>> g.start_game()
-        ['Game FOOBAR started!']
-        >>> g.in_game('Olive')
-        True
-        >>> g.in_game('Fred')
-        False
-        >>> for l in g.get_status('Olive'): print l     # doctest: +ELLIPSIS
-         --- Game: FOOBAR ---
-        OLIVE: ?????, MAISIE: ...
-        Table: empty
-        Notes: wwwwwwww, Storms: OOO, 45 cards remaining.
-        >>> for l in g.get_status('Maisie'): print l        # doctest: +ELLIPSIS
-         --- Game: FOOBAR ---
-        OLIVE: ..., MAISIE: ?????
-        Table: empty
-        Notes: wwwwwwww, Storms: OOO, 45 cards remaining.
+        TODO: doctest sample here.
     '''
-    def __init__(self, name, markup):
+    # "static" class variables.
+    colors = ['red', 'white', 'blue', 'green', 'yellow'] 
+    card_distribution = [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]
+
+    def __init__(self):
         '''
-        name: the name of the game as an ID.
-        text_markup: a class for marking up the the return game state text.
-            Enables bolding, colorizing, etc text that is returned. Useful
-            for abstracting markup to support mulitple bolding and colorizing
-            contexts, like IRC and xterms.
+            Later may take variants as args so something.
         '''
-        self._players = {}
+        self._players = defaultdict(str)
         # turn_order[0] is always current player's name
         self.turn_order = []
         self.max_players = 5
-        self.name = name
-        self.markup = markup
 
         self.notes_up, self.notes_down = ('w', 'b')
         self.notes = [self.notes_up for i in range(8)]
@@ -256,20 +187,15 @@ class Game(object):
         self.storms = [self.storms_down for i in range(3)]
         
         # The deck is Cards with color and count distributions shown, shuffled.
-        self.colors = [markup.RED, markup.WHITE, markup.BLUE, markup.GREEN,
-                  markup.YELLOW]
-        self.card_distribution = [1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5]
-        self.deck = [Card(c, n, self.markup) for c in self.colors
+        self.deck = [Card(c, n) for c in Game.colors
                      for n in self.card_distribution]
-
         random.shuffle(self.deck)
+
         self._playing = False
         self._game_over = False
 
-        # table is a dict of lists of cards, indexed by color or use.
-        self.table = {}
-        for c in self.colors:
-            self.table[c] = list()     # list of cards.
+        # table is a dict of lists of cards, indexed by color. 
+        self.table = defaultdict(list)
 
         self.discards = list()     # list of Cards
 
@@ -292,61 +218,67 @@ class Game(object):
         '''return a list of player ids in the game.'''
         return self._players.keys()
 
-    def discard_card(self, nick, i):
-        '''Discard the card in slot i.'''
+    def discard_card(self, nick, X):
+        '''Discard the card with ID X.'''
         pub, priv = [], []
         if not self._in_game_is_turn(nick, priv):
             return (pub, priv)
 
-        if not (0 < i < 6):
-            pub.append(['%s tried to discard card in slot %d, oops.' % (nick, i)])
-            priv.append(['card slots must be between 1 and 5 inclusive.'])
+        if not X.upper() in self._players[nick].positions:
+            priv.append('You tried to discard card %s, oops.' % X)
+            priv.append('Card must be one of %s' %
+                        ', '.join(sorted(self._players[nick].positions)))
             return (pub, priv)
             
-        c = self._players[nick].get_card(i)
+        c = self._players[nick]._get_card(X)
+        self._players[nick]._add_card(self.deck.pop(0))
         pub.append('%s has discarded a %s' % (nick, str(c)))
         self.discards.append(c)
-        self._players[nick].add_card(self.deck.pop(0))
         self._flip(self.notes, self.notes_down, self.notes_up)
         self.turn_order.append(self.turn_order.pop(0))
-        pub.append('It is now %s\'s turn in game %s.' %
-                   (self.turn_order[0], self.markup.bold(self.name)))
+
+        pub += self.get_table()[0]
 
         if self._is_game_over():
             self._end_game(pub, priv)
 
         return (pub, priv)    
 
-    def play_card(self, nick, i):
-        '''Have player "nick" play card in slot N from his/her hand.
-        "i" is indexed by 1 (slot number) and must be between 1 and 5,
-        The output is for group consumption.'''
+    def play_card(self, nick, X):
+        '''Have player "nick" play card X from his/her hand. "X" is the 
+        card ID, e.g. A, B, C, ... N. The output is for group
+        consumption.'''
         pub, priv = [], []
         if not self._in_game_is_turn(nick, priv):
             return (pub, priv)
 
-        c = self._players[nick].get_card(i)
+        if not X.upper() in self._players[nick].positions:
+            priv.append(['You tried to play card %s, oops.' % X])
+            priv.append(['Card must be one of %s' %
+                        ', '.join(sorted(self._players[nick].positions))])
+            return (pub, priv)
+
+        c = self._players[nick]._get_card(X)
         if self._is_valid_play(c):
             self.table[c.color].append(c)
             pub.append('%s successfully added %s to the %s group.' %
-                          (nick, str(c), c.color))
-            if len(self.table[c.color]) == 5:
-                pub.append('%s for finishing color: one note token flipped!' %
-                           self.markup.bold('Bonus'))
-                
+                       (nick, str(c), c.color))
+            if len(self.table[c.color]) == len(Game.colors):
+                pub.append('Bonus for finishing %s: one note token '
+                           'flipped up!' % c.color)
                 self._flip(self.notes, self.notes_down, self.notes_up)
         else:
             pub.append('%s guessed wrong with %s! One storm token '
-                          'flipped!' % (nick, str(c)))
+                          'flipped up!' % (nick, str(c)))
             self._flip(self.storms, self.storms_down, self.storms_up)
             self.discards.insert(0, c)
 
-        self._players[nick].add_card(self.deck.pop())
-        pub.append('%s drew a new card from the deck into slot 5.' % nick)
+        self._players[nick]._add_card(self.deck.pop())
+        pub.append('%s drew a new card from the deck into his or her hand.' % nick)
 
         self.turn_order.append(self.turn_order.pop(0))
-        pub.append('It is now %s\'s turn in game %s.' %
-                   (self.turn_order[0], self.markup.bold(self.name)))
+
+        pub += self.get_table()[0]
 
         if self._is_game_over():
             self._end_game(pub, priv)
@@ -376,104 +308,122 @@ class Game(object):
                 hint = str(hint)
             except ValueError:
                 priv.append('The hint command must be a string (color) or '
-                            'an integer (card number). Valid colors are "white" or "w" '
-                            '"blue" or "b", "red" or "r", "green" or "g", or '
-                            '"yellow" or "y" (case insensitive.')
+                            'an integer (card number). Valid colors are %s '
+                            ' or the first charecter  of the word (all case '
+                            'insensitive.' % ', '.join(Game.colors))
                 return (pub, priv)
 
         pub.append('Invalid hint command still %s\'s turn.' % self.turn_order[0])
         if not player in self._players.keys():
-            priv.append('player %s is not in the game.' % (player, self.name))
+            priv.append('player %s is not in the game.' % player)
             return (pub, priv)
 
         if isinstance(hint, str):
             hint = hint.lower()
-            if not hint in self.colors or (
-                    len(hint) == 1 and not hint in [c[0] for c in self.colors]):
+            if not hint in Game.colors or (
+                    len(hint) == 1 and not hint in [c[0] for c in Game.colors]):
                 priv.append('%s is not a valid color. Valid colors are %s.' %
-                        (hint, ', '.join(self.colors)))
+                        (hint, ', '.join(Game.colors)))
                 return (pub, priv)
 
             # convert "?" into full color string.
             if len(hint) == 1:
-                hint = [c for c in self.colors if c[0] == hint][0]
+                hint = [c for c in Game.colors if c[0] == hint][0]
 
         elif isinstance(hint, int) and not 0 < hint < 6:
             priv.append('numbers must be between 1 and 5 inclusive.')
             return (pub, priv)
 
-        # TODO: Do we want to actually validate the hint command?
-        # if a lie, tell everyone that 'nick' is a dirty-low down
-        # deceiver. 
-
         # valid hint command, do the action.
         pub = []
         if not self.notes_up in self.notes:
-            pub.append('Oh no! %s gave a hint when all notes were black '
-                       'side down. ' % nick)
+            pub.append('Oh no! %s gave a hint when all notes were turned '
+                       'over. ' % nick)
             pub.append('So, ya know, just disregard anything they said.')
             return (pub, priv)
 
-        slots = self._get_slots(hint)
+        cards = self._get_cards(player, hint)
 
-        plural = 's' if len(slots) > 1 else ''
-        pub.append('%s: your hand contains a %s card in slot%s %s' %
-                   (player, str(hint), plural, 
-                    ', '.join([str(s) for s in slots])))
+        if not cards:
+            pub.append('Looks like %s is as deceiving as a low down dirty '
+                       '... deceiver. They gave a hint that does not '
+                       'match anything in %s\'s hand!' % (nick, player))
+            return (pub, priv)
+
+        plural = 's ' if len(cards) > 1 else ' '
+        is_are = 'are ' if len(cards) > 1 else 'is '
+        a = 'a ' if isinstance(hint, int) else ''
+        pub.append('%s has given %s a hint: your card%s%s %s%s%s' % (
+                   (nick, player, plural, ', '.join(cards), is_are, 
+                    a, str(hint))))
         self.turn_order.append(self.turn_order.pop(0))
-        pub.append('It is now %s\'s turn.' %
-                   (self.turn_order[0], self.markup.bold(self.name)))
-
         self._flip(self.notes, self.notes_up, self.notes_down)
 
+        pub += self.get_table()[0]
         return (pub, priv)
 
     def swap_cards(self, nick, A, B):
-        '''In nick's hand, move card from A to B slot.'''
+        '''In nick's hand, swap cards A and B.'''
         pub, priv = [], []
         if not nick in self._players.keys():
-            priv.append('You are not in the game.' % self.markup.bold(self.name))
+            priv.append('You are not in the game.')
             return (pub, priv)
 
         pub, priv = self._players[nick].swap_cards(A, B)
+        tmp = self.get_hands(nick)
+        pub += tmp[0]
+        priv += tmp[1]
         return (pub, priv)
 
     def sort_cards(self, nick):
         '''In nick's hand, sort cards to "original" A-E order.'''
         pub, priv = [], []
         if not nick in self._players.keys():
-            priv.append('You are not in game %s.' % self.markup.bold(self.name))
+            priv.append('You are not in game %s.')
             return (pub, priv)
 
         pub, priv = self._players[nick].sort_cards()
+        tmp = self.get_hands(nick)
+        pub += tmp[0]
+        priv += tmp[1]
         return (pub, priv)
 
-    def move_card(self, nick, A, B):
-        '''In nick's hand, move card from A to B slot.'''
+    def move_card(self, nick, A, i):
+        '''In nick's hand, move card A to slot i.'''
         pub, priv = [], []
         if not nick in self._players.keys():
-            priv.append('You are not in game %s.' % self.markup.bold(self.name))
+            priv.append('You are not in game %s.')
             return (pub, priv)
 
-        pub, priv = self._players[nick].move_cards(A, B)
+        pub, priv = self._players[nick].move_card(A, i)
+        tmp = self.get_hands(nick)
+        pub += tmp[0]
+        priv += tmp[1]
         return (pub, priv)
 
-    def get_status(self, nick, show_all=False):
-        '''Return game status for player, masking that player's cards.'''
-        pub = []
-        priv = ['--- Game Status: %s ---' % self.markup.bold(self.name)]
+    def get_hands(self, nick):
+        pub, priv = [], []
         hands = []
         for p in self._players.values():
-            if show_all:
+            if p.name != nick:
                 hands.append(p.get_hand())
             else:
-                if p.name != nick:
-                    hands.append(p.get_hand())
-                else:
-                    hands.append(p.get_hand(hidden=True))
+                hands.append(p.get_hand(hidden=True))
 
-        priv.append(', '.join(hands))
+        priv.append('Current hands: %s' % ', '.join(hands))
+        return pub, priv
 
+    def get_discard_pile(self):
+        pub, priv = [], []
+        if not len(self.discards):
+            priv.append('There are no cards in the discard pile.')
+            return pub, priv
+
+        priv.append('Discards: %s' % ', '.join([str(c) for c in self.discards]))
+        return pub, priv
+
+    def get_table(self):
+        pub, priv = [], []
         # GTL - this could be done in a confusing list comprehension.
         cardstrs = list()
         for cardstack in self.table.values():
@@ -481,81 +431,70 @@ class Game(object):
                 cardstrs.append(''.join(str(c) for c in cardstack))
 
         if not cardstrs:
-            priv.append('Table: empty')
+            pub.append('Table: empty')
         else:
-            priv.append('Table: %s' % ', '.join(cardstrs))
+            pub.append('Table: %s' % ', '.join(cardstrs))
 
-        cur_player = self.turn_order[0] if len(self.turn_order) else 'N/A'
-        priv.append('Notes: %s, Storms: %s, %d cards remaining.' %
+        pub.append('Notes: %s, Storms: %s, %d cards remaining.' %
                       (''.join(self.notes), ''.join(self.storms), 
                        len(self.deck)))
-        priv.append('Current player: %s' % cur_player)
-        if len(self.discards):
-            priv.append('Top discard: %s. (size is %d)' %
-                          (str(self.discards[-1]), len(self.discards)))
 
-        return (pub, priv)
-
-    def show_game_state(self):
-        '''Show the entire game status - only for
-        debugging/super user/non-players.'''
-        pub, priv = [], []
-        if len(self._players):
-            # we just show the status of frst player w/show_all=True
-            a, b = self.get_status(
-                self._players[self._players.keys()[0]].name, show_all=True)
-            pub += a
-            priv += b
+        if not self.turn_order:
+            pub.append('Upcoming turns: Turn order not decided yet.')
         else:
-            priv.append(' --- Game %s is waiting for players to join --- ' %
-                          self.markup.bold(self.name))
+            pub.append('Upcoming turns: %s' % ', '.join(self.turn_order))
 
-        priv.append('Deck: %s' % ''.join([str(c) for c in self.deck]))
-        priv.append('Discard: %s' % ''.join([str(c) for c in self.discards]))
+        if len(self.discards):
+            pub.append('Top discard: %s. (size is %d)' %
+                          (str(self.discards[0]), len(self.discards)))
 
-        return (pub, priv)
+        return pub, priv
 
     def add_player(self, nick):
         if self._playing:
-            return ([],['Game %s already started.' % self.markup.bold(self.name)])
+            return ([],['Game already started.'])
 
         pub, priv = [], []
         if len(self._players) >= self.max_players:
-            priv.append('max players already in game %s. You can start'
-                          ' another with !new [name]' % self.name)
+            priv.append('Max players already in game %s.')
         else:
             if nick in self._players.keys():
-                priv.append('You are already in game %s' % self.name)
+                priv.append('You are already in the game.')
             else:
-                hand = self.deck[:5]
-                self.deck = self.deck[5:]
-                self._players[nick] = Player(nick, hand, self.markup)
-                pub.append('%s has joined game %s.' %
-                           (nick, self.markup.bold(self.name)))
+                self._players[nick] = Player(nick)
+                pub.append('%s has joined the game.' % nick)
                 if len(self._players) > 1:
-                    pub.append('Game %s has enough players and can be started '
-                               'with the start command,' % self.markup.bold(self.name))
+                    pub.append('The game has enough players and can be started '
+                               'with the start command !start.')
 
         return (pub, priv)
 
     def remove_player(self, nick):
         if not nick in self._players.keys():
-            return ([],['You are not in game %s. You cannot be removed from a game you'
-                      ' are not in.' % self.markup.bold(self.name)])
-
+            return ([],['You are not in the game. You cannot be removed from a game you'
+                      ' are not in.'])
+        
         pub, priv = [], []
-        pub.append('Removing %s from game %s' % (nick, self.name))
-        priv.append('You\'ve been removed from game %s.' % self.name)
-        pub.append('Putting %s\'s cards back in the' ' deck and reshuffling.' % nick)
-        self.deck += self._players[nick].hand
-        random.shuffle(self.deck)
+        pub.append('Removing %s from the game.' % nick)
+        priv.append('You\'ve been removed from the game.')
+        if self._players[nick].hand:
+            pub.append('Putting %s\'s cards back in the' ' deck and reshuffling.' % nick)
+            self.deck += self._players[nick].hand
+            random.shuffle(self.deck)
+
         del self._players[nick]
 
         if len(self._players) < 2:
-            pub.append('Stopping game %s as there are fewer than two people left in '
-                       'the game.' % self.markup.bold(self.name))
+            pub.append('Stopping the game as there are fewer than two people left in '
+                       'the game.')
             self._playing = False
             self._game_over = True
+
+        elif len(self._players) < 4:
+            pub.append('Now that there are fewer than four players, everyone gets '
+                       'another card. Adding card to each player\s hand.')
+            for p in self._players.values():
+                p.hand.append(self.deck.pop(0))
 
         if self._playing:
             if nick == self.turn_order[0]:
@@ -570,39 +509,49 @@ class Game(object):
         or if there are not enough players.'''
         pub, priv = [], []
         if not nick in self._players.keys():
-            priv.append('You are not in game %s.' % self.markup.bold(self.name))
+            priv.append('You are not in the game.')
             return (pub, priv)
 
         if self._playing:
-            priv.append('Game %s has already begun.' % self.markup.bold(self.name))
+            priv.append('The game has already begun.')
             return (pub, priv)
 
         if len(self._players) > 1:
             self._playing = True
-            pub.append('%s game with game id "%s" has begun!' %
-                       (self._rainbow('Hanabi'), self.markup.bold(self.name)))
+            pub.append('The Hanabi game has started!')
             self.turn_order = random.sample(self._players.keys(), len(self._players))
         else:
             priv.append('There are not enough players in the game, not starting.')
             return (pub, priv)
         
-        pub.append('It is now %s\'s turn in game %s.' %
-                   (self.turn_order[0], self.markup.bold(self.name)))
+        card_count = 5 if len(self._players) < 4 else 4
+        for player in self._players.values():
+            player.hand = self.deck[:card_count]
+            player.positions = [string.uppercase[i] for i in xrange(card_count)]
+            self.deck = self.deck[card_count:]
+
+        pub += self.get_table()[0]
+
         return (pub, priv)
+
     #
     # "private" methods below
     #
+    def _get_cards(self, player, hint):
+        '''Figure how which cards the hint is referring to and return the list
+        if indexes that match the hint. Hint can be an int (1-5) or a string (color).'''
+        ret_val = list()
+        if isinstance(hint, int):
+            for i in xrange(len(self._players[player].hand)):
+                if self._players[player].hand[i].number == hint:
+                    ret_val.append(self._players[player].positions[i])
 
-    def _rainbow(self, s):
-        '''Return a string in a rainbox of colors.'''
-        ret = ''
-        colors = [self.markup.RED, self.markup.WHITE, self.markup.BLUE,
-                  self.markup.GREEN, self.markup.YELLOW]
-        for i in range(len(s)):
-            ret += self.markup.color(s[i], colors[0])
-            colors.append(colors.pop(0))
+        elif isinstance(hint, str):
+            for i in xrange(len(self._players[player].hand)):
+                if self._players[player].hand[i].color == hint:
+                    ret_val.append(self._players[player].positions[i])
 
-        return ret
+        return ret_val if len(ret_val) else None
 
     def _flip(self, tokens, A, B):
         '''flip the first non A char token to the B token char.'''
@@ -619,14 +568,15 @@ class Game(object):
             return True
         elif not self.storms_down in self.storms:
             return True
+        else:
+            return False
 
     def _end_game(self, pub, priv):
         score = sum([len(cs) for cs in self.table.values()])
         self._game_over = True
         self._playing = False
         pub += ['-------------------------']
-        pub.append('Game %s is over. Final score is %d.' %
-                   (self.markup.bold(self.name), score))
+        pub.append('The game is over. Final score is %d.' % score)
         if 0 <= score <= 5:
             pub.append('Oh dear! The crowd booed.')
         elif 6 <= score <= 10:
@@ -638,7 +588,7 @@ class Game(object):
         elif 21 <= score <= 24:
             pub.append('Very good! The audience is enthusiastic!')
         elif score == 25:
-            pub.append('%s! It\'s a perfect game! 25 points!' % self._rainbow('Congratulations'))
+            pub.append('Congratulationss! It\'s a perfect game! 25 points!')
         else:
             pub.append('Hmm. score should only be in range 0 to 25. Somthing is amiss. '
                        ' Might as well play again...')
@@ -662,10 +612,10 @@ class Game(object):
         '''Return True if the player is in the game and is his/her turn
         else return False.'''
         if not nick in self._players.keys():
-            priv.append('You are not in game %s.' % self.markup.bold(self.name))
+            priv.append('You are not in game.')
             return False
         elif not self._playing:
-            priv.append('The game %s has not yet started' % self.name)
+            priv.append('The game has not yet started')
             return False
         elif self.turn_order[0] != nick:
             priv.append('It is not your turn. It is %s\'s turn.' % self.turn_order[0])

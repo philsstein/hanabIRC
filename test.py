@@ -1,5 +1,10 @@
+#!/usr/bin/env python
+'''
+    Just test for simple syntax and edge case errors 
+    by running through a few scenarios.
+'''
+from string import uppercase
 from hanabi import Game, Player, Card
-from text_markup import xterm_markup
 
 def display(lists):
     for lines in [('Public:', lists[0]), ('Private:', lists[1])]:
@@ -10,76 +15,56 @@ def display(lists):
             for l in lines[1]:
                 print '\t', l
 
-g = Game('foobar', xterm_markup())
+def show_hands(g):
+    hands = [p.get_hand() for p in g._players.values()]
+    hidden = [p.get_hand(hidden=True) for p in g._players.values()]
+    print ' --- '
+    print ' Hands: %s' % ', '.join(hands)
+    print 'Hidden: %s' % ', '.join(hidden)
+    print ' --- '
+
+def show_game(num_players, win=True):
+    g = Game()
+    [display(g.add_player('player_%d' % i)) for i in range(1, num_players+1)]
+    p1 = g._players[g._players.keys()[0]].name
+    g.start_game(p1)
+
+    while not g._is_game_over():
+        for c in Game.colors:
+            for i in xrange(1, 6):
+                # get current player
+                p = g.turn_order[0]
+
+                # card 'A' is always first. 
+                g._players[p].sort_cards() 
+
+                # the fix in in, put the in/correct card at 'A'
+                if win:
+                    g._players[p].hand[0] = Card(c, i)
+                else:
+                    g._players[p].hand[0] = Card(c, 6-i)
+
+                show_hands(g)
+                print '%s playing card A' % p
+                display(g.play_card(p, 'A'))
+                if g._is_game_over():
+                    return
+
+for w in [True, False]:
+    for n in range(5, 1, -1):
+        show_game(n, w)
+
+g = Game()
 display(g.add_player('Olive'))
-display(g.get_status('Olive', show_all=True))
+display(g.get_hands('Olive'))
 display(g.add_player('Maisie'))
 display(g.add_player('Jasper'))
 display(g.add_player('George'))
 display(g.add_player('Frank'))
 display(g.add_player('One Too Many'))
-display(g.show_game_state())
+display(g.get_table())
 display(g.remove_player('George'))
-display(g.show_game_state())
+display(g.get_table())
 display(g.start_game('Olive'))
 display(g.remove_player('Maisie'))
-
-# cheat and force Olive to have red: 12345 and Jasper tohave yellow 12345
-g._players['Olive'].hand = [Card(xterm_markup.RED, i+1, g.markup) for i in range(5)]
-g._players['Jasper'].hand = [Card(xterm_markup.YELLOW, i+1, g.markup) for i in range(5)]
-g._players['Frank'].hand = [Card(xterm_markup.GREEN, i+1, g.markup) for i in range(5)]
-
-# force turn order
-g.turn_order = ['Olive', 'Jasper', 'Frank']
-display(g.get_status('Olive', show_all=True))
-display(g.play_card('Olive', 1))
-display(g.play_card('Jasper', 3))
-display(g.play_card('Frank', 3))
-display(g.play_card('Olive', 1))
-display(g.play_card('Jasper', 1))
-display(g.play_card('Frank', 3))
-display(g.play_card('Olive', 1))
-display(g.show_game_state())
-
-# test winning game. Make game w/5 people
-# with hands of same color and in a row, then just play the hands
-# in sequence.
-g = Game('winning_game', xterm_markup())
-[display(g.add_player('player %d' % i)) for i in range(1, 6, 1)]
-p1 = g._players[g._players.keys()[0]].name
-g.start_game(p1)
-colors = [xterm_markup.RED, xterm_markup.BLUE, xterm_markup.GREEN, 
-          xterm_markup.WHITE, xterm_markup.YELLOW]
-for p in g._players.values():
-    p.hand = [Card(colors[0], i+1, g.markup) for i in range(5)]
-    colors.append(colors.pop(0))
-
-display(g.show_game_state())
-for i in range(26):
-    display(g.play_card(g.turn_order[0], 1))
-    if g._is_game_over():
-        break
-
-display(g.show_game_state())
-
-# test losing game. Make game w/5 people
-# with hands of same color and in a row, then just play the hands
-# in bad sequence.
-g = Game('losing_game', xterm_markup())
-[display(g.add_player('player %d' % i)) for i in range(1, 6, 1)]
-p1 = g._players[g._players.keys()[0]].name
-g.start_game(p1)
-colors = [xterm_markup.RED, xterm_markup.BLUE, xterm_markup.GREEN, 
-          xterm_markup.WHITE, xterm_markup.YELLOW]
-for p in g._players.values():
-    p.hand = [Card(colors[0], i+1, g.markup) for i in range(5)]
-    colors.append(colors.pop(0))
-
-display(g.show_game_state())
-for i in range(5):
-    display(g.play_card(g.turn_order[0], 5))
-    if g._is_game_over():
-        break
-
-display(g.show_game_state())
 
