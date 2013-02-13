@@ -75,7 +75,7 @@ class Player(object):
 
     def card_index(self, X):
         # ugly, sorry. Works well though.
-        return next((i for i, c in enumerate(self.hand) if c.mark == X), None)
+        return next((i for i, c in enumerate(self.hand) if c.mark == X.upper()), None)
 
     def swap_cards(self, A, B):
         '''swap a card within a hand. output is for the group. A and B
@@ -107,12 +107,12 @@ class Player(object):
             return pub, priv
 
         j = self.card_index(A.upper())
-        if not j:
+        if j is None:
             priv.append('move card argument must be one of %s' %
                         ', '.join(sorted([c.mark for c in self.hand])))
             return pub, priv
 
-        self.hand.insert(i, self.hand.pop(j))
+        self.hand.insert(i-1, self.hand.pop(j))
         priv.append('Moved card %s to position %d.' % (A, i))
         return pub, priv
 
@@ -201,6 +201,16 @@ class Game(object):
         t = 'N/A' if not self.turn_order else self.turn_order[0]
         return (['It is %s\'s turn to play.' % t], [])
 
+    def turns(self):
+        '''Tell the players whos turn it is.'''
+        pub = list()
+        if not self.turn_order:
+            pub.append('Turn order not decided yet.')
+        else:
+            pub.append('Upcoming turns and turn order: %s' % ', '.join(self.turn_order))
+
+        return (pub, list())
+
     def has_started(self):
         return self._playing
 
@@ -268,7 +278,7 @@ class Game(object):
             self._flip(self.storms, self.storms_down, self.storms_up)
             self.discards.insert(0, c)
 
-        self._players[nick].add_card(self.deck.pop())
+        self._players[nick].add_card(self.deck.pop(0))
         pub.append('%s drew a new card from the deck into his or her hand.' % nick)
 
         self.turn_order.append(self.turn_order.pop(0))
@@ -294,6 +304,11 @@ class Game(object):
         '''
         pub, priv = [], []
         if not self._in_game_is_turn(nick, priv):
+            return (pub, priv)
+        
+        if nick == player:
+            priv.append('You really want to give a hint to yourself? Too bad '
+                        'no information leak here.')
             return (pub, priv)
 
         try:
@@ -414,7 +429,7 @@ class Game(object):
             priv.append('There are no cards in the discard pile.')
             return pub, priv
 
-        priv.append('Discards: %s' % ', '.join([str(c) for c in self.discards]))
+        priv.append('Discards: %s' % ', '.join([c.front() for c in self.discards]))
         return pub, priv
 
     def get_table(self):
@@ -423,7 +438,7 @@ class Game(object):
         cardstrs = list()
         for cardstack in self.table.values():
             if len(cardstack):
-                cardstrs.append(''.join(str(c) for c in cardstack))
+                cardstrs.append(''.join([c.front() for c in cardstack]))
 
         if not cardstrs:
             pub.append('Table: empty')
@@ -434,14 +449,9 @@ class Game(object):
                       (''.join(self.notes), ''.join(self.storms), 
                        len(self.deck)))
 
-        if not self.turn_order:
-            pub.append('Upcoming turns: Turn order not decided yet.')
-        else:
-            pub.append('Upcoming turns: %s' % ', '.join(self.turn_order))
-
         if len(self.discards):
             pub.append('Top discard: %s. (size is %d)' %
-                          (str(self.discards[0]), len(self.discards)))
+                          (self.discards[0].front(), len(self.discards)))
 
         return pub, priv
 
@@ -473,7 +483,7 @@ class Game(object):
         pub.append('Removing %s from the game.' % nick)
         priv.append('You\'ve been removed from the game.')
         if self._players[nick].hand:
-            pub.append('Putting %s\'s cards back in the' ' deck and reshuffling.' % nick)
+            pub.append('Putting %s\'s cards back in the deck and reshuffling.' % nick)
             self.deck += self._players[nick].hand
             random.shuffle(self.deck)
 
