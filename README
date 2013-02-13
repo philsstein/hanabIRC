@@ -1,0 +1,11 @@
+
+This package implements an IRC bot which plays the game Hanabi.
+
+History:
+--------
+2013-02-13 - Initial creation. (See git logs for history.)
+
+TODO:
+-----
+- do not print hint is given in prov channel and no notes left.
+- add total time game took at end game
