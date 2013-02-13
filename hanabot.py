@@ -195,14 +195,18 @@ class Hanabot(SingleServerIRCBot):
                 'started, players take turns either !playing a card, '
                 '!discarding a card, or giving another player a !hint. '
                 'After a valid !play or !discard the state of the '
-                'table is shown along with next turn ordering. (The table '
-                'state can also be seen with the !table command.')
+                'table is shown. The table state can also be seen '
+                'with the !table command. The turn order is shown with !turns.')
             usage.append(
                 'Players can use !hands to view all hands at the table, '
                 'including their own. Your own hand is shown with the "backs" '
-                'facing you. Each card is assigned a letter A-E and "tracks" as '
-                'the cards in your hand move around. You reference your own '
-                'hands via these letters, e.g. "!play C" or "!discard A"')
+                'facing you. When any card is added to your hand, it is assigned '
+                ' a letter A-E, allowing you to track individial cards as they move around.'
+                ' When a card leaves your hand its letter is assigned to the '
+                'incoming card. ')
+            usage.append('You reference your own '
+                'hands via these letters, e.g. "!play C" or "!discard A". You '
+                'can arrange your hand via !swap, !sort, and !move.')
             usage.append(
                 'Hints are given by the !hint command. The hint format '
                 'is "!hint nick color|number". Valid numbers are 1-5; '
