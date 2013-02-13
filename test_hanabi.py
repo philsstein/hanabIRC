@@ -13,10 +13,8 @@ class test_hanabi(unittest2.TestCase):
         for p in players:
             self.game.add_player(p)
 
-        #self.game.start_game(players[0])
-        #self.game._turn_order = players
-        #for c, p in zip(self.game.colors[:2], players[:2]):
-        #    self.game._players[p].hand = [Card(c, i, b) for i, b in zip(xrange(1,6), ['A', 'B', 'C', 'D', 'E'])
+        self.game.start_game(players[0])
+        self.game.turn_order = list(players)
 
     def getHand(self, h):
         return ' '.join([str(c) for c in h])
@@ -35,6 +33,13 @@ class test_hanabi(unittest2.TestCase):
         print p.swap_cards('A', 'E')
         self.assertEqual('EBCDA', self.getBacks(p.hand))
 
+
+    def test_play(self):
+        self.setUpGame()
+        print self.game.turn()
+        print self.game.play_card(players[0], 'A')
+        print self.game.turn()
+        print self.game.hint_player(players[1], players[0], 'blue')
 
 if __name__ == '__main__':
     unittest2.main()

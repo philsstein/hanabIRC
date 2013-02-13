@@ -196,7 +196,7 @@ class Game(object):
         '''Return True is nick is in the game, False otherwise.'''
         return nick in self._players.keys()
 
-    def turn(self, nick):
+    def turn(self):
         '''Tell the players whos turn it is.'''
         t = 'N/A' if not self.turn_order else self.turn_order[0]
         return (['It is %s\'s turn to play.' % t], [])
@@ -339,7 +339,7 @@ class Game(object):
 
         cards = self._get_cards(player, hint)
 
-        if not cards:
+        if not len(cards):
             pub.append('Looks like %s is as deceiving as a low down dirty '
                        '... deceiver. They gave a hint that does not '
                        'match anything in %s\'s hand!' % (nick, player))
@@ -349,7 +349,7 @@ class Game(object):
         is_are = 'are ' if len(cards) > 1 else 'is '
         a = 'a ' if isinstance(hint, int) else ''
         pub.append('%s has given %s a hint: your card%s%s %s%s%s' % (
-                   (nick, player, plural, ', '.join(cards), is_are, 
+                   (nick, player, plural, ', '.join([c.mark for c in cards]), is_are, 
                     a, str(hint))))
         self.turn_order.append(self.turn_order.pop(0))
         self._flip(self.notes, self.notes_up, self.notes_down)
@@ -536,18 +536,7 @@ class Game(object):
     def _get_cards(self, player, hint):
         '''Figure how which cards the hint is referring to and return the list
         if indexes that match the hint. Hint can be an int (1-5) or a string (color).'''
-        ret_val = list()
-        if isinstance(hint, int):
-            for i in xrange(len(self._players[player].hand)):
-                if self._players[player].hand[i].number == hint:
-                    ret_val.append(self._players[player].positions[i])
-
-        elif isinstance(hint, str):
-            for i in xrange(len(self._players[player].hand)):
-                if self._players[player].hand[i].color == hint:
-                    ret_val.append(self._players[player].positions[i])
-
-        return ret_val if len(ret_val) else None
+        return [c for c in self._players[player].hand if c.number == hint or c.color == hint]
 
     def _flip(self, tokens, A, B):
         '''flip the first non A char token to the B token char.'''
