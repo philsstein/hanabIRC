@@ -17,3 +17,10 @@ TODO:
 - keep stats?
 - add user-configured color to the bot
 - add back in multiple games per channel
+- fix card mark bug in leave when extra card added
+- PM user with updated hands when it is their turn
+- show current turn w/table
+- add !replace command to replace people in-game
+- show all discards w/table
+- show card mark w/hands
+
