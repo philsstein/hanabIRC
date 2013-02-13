@@ -46,7 +46,7 @@ class Hanabot(SingleServerIRCBot):
             'Game Management': ['new', 'delete', 'join', 'start', 'leave'],
             'Hand Management': ['move', 'swap', 'sort'],
             'Game Action': ['play', 'hint', 'discard'],
-            'Information': ['help', 'rules', 'turn', 'game', 'hands',
+            'Information': ['help', 'rules', 'turn', 'turns', 'game', 'hands',
                             'table', 'discardpile']
         }
         
@@ -261,7 +261,7 @@ class Hanabot(SingleServerIRCBot):
                 s = ('Waiting for players, no players have '
                      'joined yet.')
         else:
-            turn = self.game.turn(event.source.nick)[0][0]
+            turn = self.game.turn()[0][0]
             s = ('Game is active and being played by players %s. %s' %
                  (', '.join(self.game.players()), turn))
 
@@ -271,7 +271,13 @@ class Hanabot(SingleServerIRCBot):
         if not self._check_args(args, 0, [], event, 'turn'):
             return 
 
-        self._display(self.game.turn(event.source.nick), event.source.nick)
+        self._display(self.game.turn(), event.source.nick)
+
+    def handle_turns(self, args, event):
+        if not self._check_args(args, 0, [], event, 'turn'):
+            return 
+
+        self._display(self.game.turns(), event.source.nick)
 
     def handle_table(self, args, event):
         log.debug('got table command.')
@@ -449,6 +455,7 @@ class Hanabot(SingleServerIRCBot):
         'help': 'Infinite recursion detected. Universe is rebooting...',
         'rules': '!rules - show URL for (english) Hanabi rules.', 
         'turn': '!turn - show which players turn it is.', 
+        'turns': '!turns - show turn order in current play ordering.',
         'game': '!game - show the game state.', 
         'hands': '!hands - show hands of players. Your own hand will be shown with the "backs" facing you, identified individually by a letter. When a card is removed the letter is reused for the new card.',
         'table': '!game - show the state of the table', 
