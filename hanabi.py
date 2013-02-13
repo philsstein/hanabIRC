@@ -33,15 +33,23 @@ log = logging.getLogger(__name__)
 
 class Card(object):
     '''
-    Card has a color and a number.
+    Card has a color, a number, and a "mark". The mark is a char that 
+    represents the card, think the image of the char on the back of the card.
     '''
-    def __init__(self, color, number):
+    def __init__(self, color, number, mark=None):
         self.color = color
         self.number = number
+        self.mark = mark
 
-    def __str__(self):
+    def front(self):
         return '%s%d' % (self.color[0].upper(), self.number)
 
+    def back(self):
+        return '%s' % self.mark
+
+    def __str__(self):
+        return '%s%d/%s' % (self.color[0].upper(), self.number, 
+                           self.mark)
 
 class Player(object):
     '''
@@ -53,42 +61,34 @@ class Player(object):
     def __init__(self, name):
         self.name = str(name)
         # The player's hand, a list of Cards
-        self.hand = None
-        # The posistions of cards in hand, Displayed to the player
-        # so they can track cards by position in hand.
-        # (support for more than 5 cards though it'll never be used.)
-        self.positions = None
+        self.hand = list()
 
     def sort_cards(self):
         '''
         re-sort the card into "orginal" positions.
-
         '''
-        # confusing and ugly, sorry.
-        # sort the zipped arrays by position, i.e. the strings 'A', 'B, etc.
-        tmp = zip(self.positions, self.hand)
-        tmp.sort(key=lambda x: x[0])        # sort by 'A', 'B', etc.
-        pos, hand = zip(*tmp)               # "unzip" the values
-        self.positions = list(pos)          # and put them back as lists.
-        self.hand = list(hand)
+        self.hand = sorted(self.hand, key=lambda x: x.mark)
 
         pub, priv = [], []
         pub.append('Your cards have been sorted.')
         return pub, priv
 
+    def card_index(self, X):
+        # ugly, sorry. Works well though.
+        return next((i for i, c in enumerate(self.hand) if c.mark == X), None)
+
     def swap_cards(self, A, B):
         '''swap a card within a hand. output is for the group. A and B
         are the position-based index of the cards.'''
         pub, priv = [], []
-        A, B, = A.upper(), B.upper()
-        if not A in self.positions or not B in self.positions:
+        i = self.card_index(A.upper())
+        j = self.card_index(B.upper())
+        if i is None or j is None:
             priv.append('!swap card argument must be one of %s' %
-                        sorted(', '.join(self.positions)))
+                        ', '.join(sorted([c.mark for c in self.hand])))
             return pub, priv
 
-        i, j = self.positions.index(A), self.positions.index(B)
         self.hand[i], self.hand[j] = self.hand[j], self.hand[i]
-        self.positions[i], self.positions[j] = self.positions[j], self.positions[i]
         priv.append('Swapped cards %s and %s' % (A, B))
         return pub, priv
 
@@ -102,51 +102,44 @@ class Player(object):
             priv.append('move index arugment must be an integer.')
             return pub, priv
 
-        if not (1 <= i <= len(self.positions)):
-            priv.append('move index argument must between 1 and %d' % len(self.positions))
+        if not (1 <= i <= len(self.hand)):
+            priv.append('move index argument must between 1 and %d' % len(self.hand))
             return pub, priv
 
-        A = A.upper()
-        if not A in self.positions:
+        j = self.card_index(A.upper())
+        if not j:
             priv.append('move card argument must be one of %s' %
-                        ', '.join(sorted(self.positions)))
+                        ', '.join(sorted([c.mark for c in self.hand])))
             return pub, priv
 
-        self.hand.insert(i-1, self.hand.pop(self.positions.index(A)))
-        self.positions.insert(i-1, self.positions.pop(self.positions.index(A)))
+        self.hand.insert(i, self.hand.pop(j))
         priv.append('Moved card %s to position %d.' % (A, i))
         return pub, priv
 
     def get_hand(self, hidden=False):
         '''return the hand as a string.'''
         if not self.hand:
-            return 'No hands dealt yet.'
+            return 'No hand dealt yet.'
 
         if not hidden:
-            return '%s: %s' % (self.name, ' '.join([str(c) for c in self.hand]))
+            return '%s: %s' % (self.name, ' '.join([c.front() for c in self.hand]))
         else:
-            return '%s: %s' % (self.name, ' '.join(self.positions))
+            return '%s: %s' % (self.name, ''.join([c.back() for c in self.hand]))
 
-    def _add_card(self, card):
-        '''Add a card to a player's hand. Use this method and not add to
-        player.hand directly. Only call when the player has less than 
-        hand limit cards, i.e. soon after calling player._get_card(). The
-        card is placed on the rightmost end of the hand, in slot 5.'''
-        # simply append the card
+    def add_card(self, card):
+        '''Add a card to a player's hand. This method marks the back of the card
+        appropriately and is the only way you should add cards to a player's hand.'''
+        # use sets to find the missing mark
+        missing = set(string.uppercase[:len(self.hand)+1]) - set([c.mark for c in self.hand])
+
+        if len(missing) != 1:
+            log.info('Error: adding card to player\'s hand')
+            return
+
+        # simply append the card after marking it.
+        card.mark = list(missing)[0]
         self.hand.append(card)
 
-        # find the missing position card and add it.
-        for p in [string.uppercase[i] for i in xrange(len(self.hand))]:
-            if not p in self.positions:
-                self.positions.append(p)
-                break
-
-    def _get_card(self, X):
-        '''Get the card at position X and remove it from the player's
-        hand. Hand is the card ID. X must be valid.'''
-        i = self.positions.index(X.upper())
-        self.positions.pop(i)
-        return self.hand.pop(i)
 
 class Game(object):
     '''
@@ -223,16 +216,17 @@ class Game(object):
         pub, priv = [], []
         if not self._in_game_is_turn(nick, priv):
             return (pub, priv)
-
-        if not X.upper() in self._players[nick].positions:
+        
+        i = self._players[nick].card_index(X)
+        if i is None:
             priv.append('You tried to discard card %s, oops.' % X)
             priv.append('Card must be one of %s' %
-                        ', '.join(sorted(self._players[nick].positions)))
+                        ', '.join(sorted([c.mark for x in self._players[nick].hand])))
             return (pub, priv)
             
-        c = self._players[nick]._get_card(X)
-        self._players[nick]._add_card(self.deck.pop(0))
-        pub.append('%s has discarded a %s' % (nick, str(c)))
+        c = self._players[nick].hand.pop(i)
+        self._players[nick].add_card(self.deck.pop(0))
+        pub.append('%s has discarded %s' % (nick, str(c)))
         self.discards.append(c)
         self._flip(self.notes, self.notes_down, self.notes_up)
         self.turn_order.append(self.turn_order.pop(0))
@@ -252,19 +246,20 @@ class Game(object):
         if not self._in_game_is_turn(nick, priv):
             return (pub, priv)
 
-        if not X.upper() in self._players[nick].positions:
-            priv.append(['You tried to play card %s, oops.' % X])
-            priv.append(['Card must be one of %s' %
-                        ', '.join(sorted(self._players[nick].positions))])
+        i = self._players[nick].card_index(X)
+        if i is None:
+            priv.append('You tried to play card %s, oops.' % X)
+            priv.append('Card must be one of %s' %
+                        ', '.join(sorted([c.mark for c in self._players[nick].hand])))
             return (pub, priv)
 
-        c = self._players[nick]._get_card(X)
+        c = self._players[nick].hand.pop(i)
         if self._is_valid_play(c):
             self.table[c.color].append(c)
             pub.append('%s successfully added %s to the %s group.' %
                        (nick, str(c), c.color))
-            if len(self.table[c.color]) == len(Game.colors):
-                pub.append('Bonus for finishing %s: one note token '
+            if len(self.table[c.color]) == 5:
+                pub.append('Bonus for finishing %s group: one note token '
                            'flipped up!' % c.color)
                 self._flip(self.notes, self.notes_down, self.notes_up)
         else:
@@ -273,7 +268,7 @@ class Game(object):
             self._flip(self.storms, self.storms_down, self.storms_up)
             self.discards.insert(0, c)
 
-        self._players[nick]._add_card(self.deck.pop())
+        self._players[nick].add_card(self.deck.pop())
         pub.append('%s drew a new card from the deck into his or her hand.' % nick)
 
         self.turn_order.append(self.turn_order.pop(0))
@@ -526,8 +521,9 @@ class Game(object):
         
         card_count = 5 if len(self._players) < 4 else 4
         for player in self._players.values():
-            player.hand = self.deck[:card_count]
-            player.positions = [string.uppercase[i] for i in xrange(card_count)]
+            for c in self.deck[:card_count]:
+                player.add_card(c)
+
             self.deck = self.deck[card_count:]
 
         pub += self.get_table()[0]

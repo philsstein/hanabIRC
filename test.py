@@ -40,9 +40,9 @@ def show_game(num_players, win=True):
 
                 # the fix in in, put the in/correct card at 'A'
                 if win:
-                    g._players[p].hand[0] = Card(c, i)
+                    g._players[p].hand[0] = Card(c, i, 'A')
                 else:
-                    g._players[p].hand[0] = Card(c, 6-i)
+                    g._players[p].hand[0] = Card(c, 6-i, 'A')
 
                 show_hands(g)
                 print '%s playing card A' % p
@@ -50,6 +50,7 @@ def show_game(num_players, win=True):
                 if g._is_game_over():
                     return
 
+# run through a bunch of games.
 for w in [True, False]:
     for n in range(5, 1, -1):
         show_game(n, w)
