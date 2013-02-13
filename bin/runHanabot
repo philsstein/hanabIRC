@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
     hanabIRC reads configuration information from a configuration
     file or the command line and starts a hanabi playing IRC bot
@@ -26,10 +27,23 @@ import sys
 import os
 
 from ConfigParser import SafeConfigParser
-from hanabot import Hanabot
+from hanabIRC.hanabot import Hanabot
 
 # logger for this module/file
 log = logging.getLogger(__name__)
+
+def make_conf():
+    '''Write a default configuration file to stdout for HanabIRC.'''
+    section = 'general'
+    parser = SafeConfigParser()
+    parser.add_section(section)
+    parser.set(section, 'server', 'irc.freenode.net')
+    parser.set(section, 'channel', 'hanabIRC')
+    parser.set(section, 'port', '6667')
+    parser.set(section, 'notify_channel', 'boardgames')
+    parser.set(section, 'nick', 'hanabot')
+    parser.set(section, 'nick_pass', 'PASSWORD')
+    parser.write(sys.stdout)
 
 if __name__ == "__main__":
     '''
@@ -54,7 +68,13 @@ if __name__ == "__main__":
     argparser.add_argument('--config', type=str, dest='conffile',
                            help='Configuration file. Command line will '
                                 'override values found here.')
+    argparser.add_argument('--makeconf', action='store_true', dest='makeconf', 
+                           help=make_conf.__doc__)
     args = argparser.parse_args()
+
+    if args.makeconf:
+        make_conf()
+        sys.exit(0)
 
     # adjust logging level
     logLevels = {
@@ -90,6 +110,12 @@ if __name__ == "__main__":
 
     if not confparse.has_section('general'):
         log.critical('No [general] section found in configuration file.')
+        log.critical('This means you probably dont have a configuration file. '
+                     'Generate one with the --makeconf argument, and save the '
+                     'output to hanabIRC.conf in the current directory. Or '
+                     'specify the location of your existing configuration file. '
+                     'Default locations are %s. If a hanabIRC.conf file is found '
+                     'in those locations (in that order), it will be used.' % ', '.join(configfiles))
         sys.exit(1)
 
     server = confparse.get('general', 'server')

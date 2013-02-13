@@ -1,3 +1,4 @@
+
 ========
 HanabIRC
 ========
@@ -5,7 +6,7 @@ HanabIRC
 An IRC bot that organizes and plays the card game Hanabi.
 
 History
-=========
+=======
 
 * 2013-02-13 - Initial creation. (See git logs for history.)
 
