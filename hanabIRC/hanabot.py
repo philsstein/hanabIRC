@@ -312,6 +312,11 @@ class Hanabot(SingleServerIRCBot):
         nick = event.source.nick
         self._display(self.game.play_card(nick, args[0]), nick)
 
+        # tell the next player it is their turn.
+        pub, priv = self.game.turn()
+        if len(pub):
+            self._to_nick(self.game.player_turn(), pub[0])
+
         # playing a card can trigger end game.
         if self.game.game_over():
             self.game = None 

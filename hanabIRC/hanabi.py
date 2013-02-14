@@ -122,7 +122,7 @@ class Player(object):
             return 'No hand dealt yet.'
 
         if not hidden:
-            return '%s: %s' % (self.name, ' '.join([c.front() for c in self.hand]))
+            return '%s: %s' % (self.name, ' '.join([str(c) for c in self.hand]))
         else:
             return '%s: %s' % (self.name, ''.join([c.back() for c in self.hand]))
 
@@ -195,6 +195,10 @@ class Game(object):
     def in_game(self, nick):
         '''Return True is nick is in the game, False otherwise.'''
         return nick in self._players.keys()
+
+    def player_turn(self):
+        '''REturn the nick of the player whose turn it is.'''
+        return self.turn_order[0]
 
     def turn(self):
         '''Tell the players whos turn it is.'''
@@ -450,8 +454,11 @@ class Game(object):
                        len(self.deck)))
 
         if len(self.discards):
-            pub.append('Top discard: %s. (size is %d)' %
-                          (self.discards[0].front(), len(self.discards)))
+            pub.append('Discard pile: %s. (size is %d)' %
+                          (', '.join([c.front() for c in self.discards]),
+                           len(self.discards)))
+
+        pub += self.turn()[0]
 
         return pub, priv
 
@@ -499,7 +506,7 @@ class Game(object):
             pub.append('Now that there are fewer than four players, everyone gets '
                        'another card. Adding card to each player\s hand.')
             for p in self._players.values():
-                p.hand.append(self.deck.pop(0))
+                p.add_card(self.deck.pop(0))
 
         if self._playing:
             if nick == self.turn_order[0]:
