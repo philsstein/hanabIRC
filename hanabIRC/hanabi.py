@@ -27,6 +27,7 @@
 import logging
 import random
 import string
+from text_markup import irc_markup
 from collections import defaultdict
 
 log = logging.getLogger(__name__)
@@ -40,16 +41,16 @@ class Card(object):
         self.color = color
         self.number = number
         self.mark = mark
+        self.markup = irc_markup()
 
     def front(self):
-        return '%s%d' % (self.color[0].upper(), self.number)
+        return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color)
 
     def back(self):
         return '%s' % self.mark
 
     def __str__(self):
-        return '%s%d/%s' % (self.color[0].upper(), self.number, 
-                           self.mark)
+        return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color) + '/%s' % self.mark
 
 class Player(object):
     '''
