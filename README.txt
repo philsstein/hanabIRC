@@ -12,6 +12,7 @@ History
 * 2013-02-13 - Interface updates after user feedback.
 * 2013-02-14 - Added mutli-channel support. Hanbot can now run
 	in multiple channels, keeping track of multiple games.
+* 2013-02-14 - Enforce one person per game.
 
 TODO:
 =====
