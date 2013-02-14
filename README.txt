@@ -10,9 +10,10 @@ History
 
 * 2013-02-13 - Initial creation. (See git logs for history.)
 * 2013-02-13 - Interface updates after user feedback.
-* 2013-02-14 - Added mutli-channel support. Hanbot can now run
-	in multiple channels, keeping track of multiple games.
-* 2013-02-14 - Enforce one person per game.
+* 2013-02-14 
+	- Added mutli-channel support. Hanbot can now run in multiple channels, keeping track of multiple games.
+	- Enforce one person per game
+	- Use NOTICE instead of prvimsg to display text inline to user/channel.
 
 TODO:
 =====

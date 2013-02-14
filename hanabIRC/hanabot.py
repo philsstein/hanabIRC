@@ -165,23 +165,23 @@ class Hanabot(SingleServerIRCBot):
         byt the Game engine. nick is the user to priv message.
         output == (string list, string list).'''
         for l in output[0]:
-            self.connection.privmsg(event.target, l)
+            self.connection.notice(event.target, l)
 
         for l in output[1]:
-            self.connection.privmsg(event.source.nick, l)
+            self.connection.notice(event.source.nick, l)
 
     # some sugar for sending msgs
     def _to_chan(self, event, msgs):
         if isinstance(msgs, list):
             self._display((msgs, []), event)
-        elif isinstance(msgs, str) or isinstance(msgs, unicode):
+        elif isinstance(msgs, (str, unicode)):
             self._display(([msgs], []), event)
 
     # some sugar for sending strings
     def _to_nick(self, event, msgs):
         if isinstance(msgs, list):
             self._display(([], msgs), event)
-        elif isinstance(msgs, str) or isinstance(msgs, unicode):
+        elif isinstance(msgs, (str, unicode)):
             self._display(([], [msgs]), event)
 
     # Game Commands
