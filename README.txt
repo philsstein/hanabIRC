@@ -15,6 +15,7 @@ History
 	- Enforce one person per game
 	- Use NOTICE instead of prvimsg to display text inline to user/channel.
 
+
 TODO:
 =====
 - do not print hint to channel if given in a PRIVMSG
