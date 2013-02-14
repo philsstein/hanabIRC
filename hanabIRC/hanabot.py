@@ -43,7 +43,7 @@ class Hanabot(SingleServerIRCBot):
 
         # valid bot commands
         self.command_dict = {
-            'Game Management': ['new', 'delete', 'join', 'start', 'leave'],
+            'Game Management': ['new', 'delete', 'join', 'start', 'leave', 'part'],
             'Hand Management': ['move', 'swap', 'sort'],
             'Game Action': ['play', 'hint', 'discard'],
             'Information': ['help', 'rules', 'turn', 'turns', 'game',
@@ -58,7 +58,7 @@ class Hanabot(SingleServerIRCBot):
 
         # these commands can execute without an active game.
         # otherwise the command handlers can assume an active game.
-        self.no_game_commands = ['new', 'help', 'rules', 'game', 'games']
+        self.no_game_commands = ['new', 'help', 'rules', 'game', 'games', 'part']
 
         # games is a dict indexed by channel name, value is the Game object.
         self.games = dict()
@@ -358,7 +358,7 @@ class Hanabot(SingleServerIRCBot):
         if len(args) == 1:
             chan = '#%s' % args[0]
             self.connection.join(chan)
-            self._to_chan(event, 'Created new channel in %s. /join %s and !new '
+            self._to_chan(event, 'Hanabot joined channel %s. /join %s and !new '
                           'to begin game there.' % (chan, chan))
             return
 
@@ -435,6 +435,17 @@ class Hanabot(SingleServerIRCBot):
         nick = event.source.nick
         self._display(self.games[event.target].start_game(nick), event)
 
+    def handle_part(self, args, event):
+        log.debug('got part event')
+        if not self._check_args(args, 0, [], event, 'part'):
+            return 
+
+        if event.target != self.initial_channel:
+            self._to_chan(event, 'Hanabot leaving channel.')
+            self.connection.part(event.target)
+        else:
+            self._to_chan(event, 'Hanabot refuses to leave home channel. Nice try.')
+
     def handle_delete(self, args, event):
         log.debug('got delete event')
         if not self._check_args(args, 0, [], event, 'delete'):
@@ -476,11 +487,12 @@ class Hanabot(SingleServerIRCBot):
 
     ####### static class data 
     _command_usage = {
-        'new': '!new - create a new game which people can join. One game per channel.',
+        'new': '!new [channel] - create a new game. If channel is given, hanabot will join that channel. (Then use !new in that channel to create a new game.', 
         'delete': '!delete - delete a game.', 
         'join': '!join - join a game. If not game in channel, use !new to create one.', 
         'start': '!start - start a game. The game must have at least two players.',
         'leave': '!leave - leave a game. This is bad form.', 
+        'part': '!part - tell Hanabot to part the channel. Note: Hanbot will not leave its home channel.', 
         'move': '!move card - move a card in your hand and slide all other cards "right". "card" must be one of A, B, C, D, or E. "index" is where to put the card, counting from the left and must be an integer between 1 and max hand size.',
         'swap': '!swap card card - swap cards in your hand. Card arguments must be one of A, B, C, D, or E.',
         'sort': '!sort - sort your cards into "correct" order, i.e. into ABCDE order from "mixed" state.', 
@@ -492,7 +504,7 @@ class Hanabot(SingleServerIRCBot):
         'turn': '!turn - show which players turn it is.', 
         'turns': '!turns - show turn order in current play ordering.',
         'game': '!game - show the game state for current channel.', 
-        'games': '!game - show game states for all channels.',
+        'games': '!game - show game states for all channels hanabot has joined.',
         'hands': '!hands - show hands of players. Your own hand will be shown with the "backs" facing you, identified individually by a letter. When a card is removed the letter is reused for the new card.',
         'table': '!game - show the state of the table', 
         'discardpile': '!discardpile - show the current discard pile.',
