@@ -202,14 +202,16 @@ class Game(object):
 
     def turn(self):
         '''Tell the players whos turn it is.'''
-        t = 'N/A' if not self.turn_order else self.turn_order[0]
-        return (['It is %s\'s turn to play.' % t], [])
+        if not self.turn_order:
+            return (['The game has yet to start. No turns yet.'], [])
+        else:
+            return (['It is %s\'s turn to play.' % self.turn_order[0]], [])
 
     def turns(self):
         '''Tell the players whos turn it is.'''
         pub = list()
         if not self.turn_order:
-            pub.append('Turn order not decided yet.')
+            pub.append('Turn order not decided yet; the game has not started.')
         else:
             pub.append('Upcoming turns and turn order: %s' % ', '.join(self.turn_order))
 
