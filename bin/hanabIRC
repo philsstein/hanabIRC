@@ -1,0 +1,137 @@
+#!/usr/bin/env python
+'''
+    hanabIRC reads configuration information from a configuration
+    file or the command line and starts a hanabi playing IRC bot
+    on the configured server and channel.
+
+    usage: hanabIRC.py [-h] [-s SERVER] [-c CHANNEL]
+                       [-l {debug,info,warning,error,critical}]
+                       [--config CONFFILE]
+    
+    hanabot manages games of Hanabi on IRC.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -s SERVER, --server SERVER
+                            The IRC server to connect to.
+      -c CHANNEL, --channel CHANNEL
+                            The IRC #channel to connect to.
+      -l {debug,info,warning,error,critical}, --loglevel {debug,info,warning,error,critical}
+                            Set the global log level
+      --config CONFFILE     Configuration file. Command line will override values
+                            found here.
+'''
+import argparse
+import logging
+import sys
+import os
+
+from ConfigParser import SafeConfigParser
+from hanabIRC.hanabot import Hanabot
+
+# logger for this module/file
+log = logging.getLogger(__name__)
+
+def make_conf():
+    '''Write a default configuration file to stdout for HanabIRC.'''
+    section = 'general'
+    parser = SafeConfigParser()
+    parser.add_section(section)
+    parser.set(section, 'server', 'irc.freenode.net')
+    parser.set(section, 'channel', 'hanabIRC')
+    parser.set(section, 'port', '6667')
+    parser.set(section, 'notify_channel', 'boardgames')
+    parser.set(section, 'nick', 'hanabot')
+    parser.set(section, 'nick_pass', 'PASSWORD')
+    parser.write(sys.stdout)
+
+if __name__ == "__main__":
+    '''
+        main function for hanabot: parse args, create bot state,
+        connect to server/channel, run bot.
+    '''
+    desc = 'hanabot manages games of Hanabi on IRC.'
+    argparser = argparse.ArgumentParser(description=desc)
+    argparser.add_argument('-s', '--server', type=str, dest='server',
+                           help='The IRC server to connect to.')
+    argparser.add_argument('-c', '--channel', type=str, dest='channel',
+                           help='The IRC #channel to connect to.')
+    argparser.add_argument('-l', '--loglevel', type=str, dest='loglevel',
+                           default='info', choices=['debug', 'info',
+                                                    'warning', 'error',
+                                                    'critical'],
+                           help='Set the global log level')
+    argparser.add_argument('-n', '--nick', help='Nick for the bot on IRC.')
+    argparser.add_argument('--nick_pass',
+                           help='Pasword for NickServ for the bot\'s nick.')
+
+    argparser.add_argument('--config', type=str, dest='conffile',
+                           help='Configuration file. Command line will '
+                                'override values found here.')
+    argparser.add_argument('--makeconf', action='store_true', dest='makeconf', 
+                           help=make_conf.__doc__)
+    args = argparser.parse_args()
+
+    if args.makeconf:
+        make_conf()
+        sys.exit(0)
+
+    # adjust logging level
+    logLevels = {
+        'debug': logging.DEBUG,
+        'info': logging.INFO,
+        'warning': logging.WARNING,
+        'error': logging.ERROR,
+        'critical': logging.CRITICAL
+    }
+    hdlr = logging.StreamHandler()
+    hdlr.setFormatter(logging.Formatter('%(asctime)s %(name)-12s '
+                                        '%(levelname)-8s %(threadName)s '
+                                        '%(message)s', '%m-%d %H:%M:%S'))
+    root = logging.getLogger()
+    root.handlers = []
+    root.addHandler(hdlr)
+    root.setLevel(logLevels[args.loglevel])
+    #irc = logging.getLogger('irc')
+    #irc.setLevel(logging.INFO)
+    log.info('set log level to %s (%d)' % (args.loglevel,
+                                           logLevels[args.loglevel]))
+
+    # Read in configuration file of it exists or is given.
+    conffilename = 'hanabIRC.conf'
+    configfiles = [os.path.expanduser('~/.%s' % conffilename),
+                   '/etc/%s' % conffilename,
+                   conffilename]
+    if args.conffile:
+        configfiles.insert(0, args.conffile)
+
+    confparse = SafeConfigParser()
+    files = confparse.read(configfiles)
+
+    if not confparse.has_section('general'):
+        log.critical('No [general] section found in configuration file.')
+        log.critical('This means you probably dont have a configuration file. '
+                     'Generate one with the --makeconf argument, and save the '
+                     'output to hanabIRC.conf in the current directory. Or '
+                     'specify the location of your existing configuration file. '
+                     'Default locations are %s. If a hanabIRC.conf file is found '
+                     'in those locations (in that order), it will be used.' % ', '.join(configfiles))
+        sys.exit(1)
+
+    server = confparse.get('general', 'server')
+    channel = confparse.get('general', 'channel')
+    nick = confparse.get('general', 'nick')
+    nick_pass = confparse.get('general', 'nick_pass')
+
+    server = args.server if args.server else server
+    channel = args.channel if args.channel else channel
+    nick = args.nick if args.nick else nick
+    nick_pass = args.nick_pass if args.nick_pass else nick_pass
+
+    # GTL - uncomment these once they are supported.
+    # port = args.port if args.port else conf.port
+    # notify_port = args.notify_port if args.notify_port else conf.notify_port
+
+    # ok - now we can do some actual work.
+    bot = Hanabot(server, channel, nick, nick_pass)
+    bot.start()
