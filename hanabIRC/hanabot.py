@@ -181,7 +181,7 @@ class Hanabot(SingleServerIRCBot):
     def _to_nick(self, event, msgs):
         if isinstance(msgs, list):
             self._display(([], msgs), event)
-        elif isinstance(msgs, str):
+        elif isinstance(msgs, str) or isinstance(msgs, unicode):
             self._display(([], [msgs]), event)
 
     # Game Commands
@@ -249,6 +249,7 @@ class Hanabot(SingleServerIRCBot):
 
     def _game_state(self, channel):
         pub, priv = [], []
+        log.debug('game_state: chan: %s (%s), games: %s', channel, type(channel), self.games)
         if channel not in self.games:
             pub.append('There is no game being played in %s. '
                        'Use !new to start one while in %s.' % (channel, channel))
@@ -286,7 +287,7 @@ class Hanabot(SingleServerIRCBot):
 
         # iterate over all channels the bot is in.
         for chan in self.channels.keys():
-            self._display(self._game_state(chan), event)
+            self._display(self._game_state(str(chan)), event)
 
     def handle_turn(self, args, event):
         if not self._check_args(args, 0, [], event, 'turn'):
@@ -382,6 +383,14 @@ class Hanabot(SingleServerIRCBot):
             return 
 
         nick = event.source.nick
+        # enforce one game per player. Will not be needed if force users to 
+        # send commands from the channel, so I can key the game to the channel.
+        for chan, g in self.games.iteritems():
+            if nick in g.players():
+                msg = 'You are already in a game in %s. One game per nick please.' % chan
+                self._to_nick(event, msg)
+                return
+
         self._display(self.games[event.target].add_player(nick), event)
 
     # GTL TODO: make sure this is called when the players leaves the channel?
@@ -487,7 +496,7 @@ class Hanabot(SingleServerIRCBot):
 
     ####### static class data 
     _command_usage = {
-        'new': '!new [channel] - create a new game. If channel is given, hanabot will join that channel. (Then use !new in that channel to create a new game.', 
+        'new': '!new [channel] - create a new game. If channel is given, hanabot will join that channel. (Then use !new in that channel to create a new game there.)', 
         'delete': '!delete - delete a game.', 
         'join': '!join - join a game. If not game in channel, use !new to create one.', 
         'start': '!start - start a game. The game must have at least two players.',
