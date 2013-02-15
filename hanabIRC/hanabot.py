@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 
 class Hanabot(SingleServerIRCBot):
-    def __init__(self, server, channel, nick='hanabot', nick_pass=None, port=6667):
+    def __init__(self, server, channel, nick='hanabot', nick_pass=None, port=6667, topic=None):
         log.debug('new bot started at %s:%d@#%s as %s', server, port,
                   channel, nick)
         SingleServerIRCBot.__init__(
@@ -37,6 +37,7 @@ class Hanabot(SingleServerIRCBot):
 
         self.nick_pass = nick_pass
         self.nick_name = nick  
+        self.topic = topic
 
         # force channel to start with #
         self.initial_channel = channel if channel[0] == '#' else '#%s' % channel
@@ -83,6 +84,11 @@ class Hanabot(SingleServerIRCBot):
         time.sleep(1)
         conn.join(self.channel)
         conn.notice(self.channel, 'Why I outta....')
+
+    def on_join(self, conn, event):
+        log.debug('got on_join: %s %s', conn, event)
+        if self.topic:
+            self.connection.topic(event.target, self.topic)
 
     def on_privmsg(self, conn, event):
         log.debug('got privmsg. %s -> %s', event.source, event.arguments)
