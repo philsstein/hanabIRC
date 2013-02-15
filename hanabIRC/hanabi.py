@@ -249,7 +249,7 @@ class Game(object):
         self.turn_order.append(self.turn_order.pop(0))
 
         pub += self.get_table()[0]
-	priv += self.get_hands()[1]
+        priv += self.get_hands()[1]
 
         if self._is_game_over():
             self._end_game(pub, priv)
@@ -292,7 +292,7 @@ class Game(object):
         self.turn_order.append(self.turn_order.pop(0))
 
         pub += self.get_table()[0]
-	priv += self.get_hands()[1]
+        priv += self.get_hands()[1]
 
         if self._is_game_over():
             self._end_game(pub, priv)
@@ -379,7 +379,7 @@ class Game(object):
         self._flip(self.notes, self.notes_up, self.notes_down)
 
         pub += self.get_table()[0]
-	priv += self.get_hands()[1]
+        priv += self.get_hands()[1]
         return (pub, priv)
 
     def swap_cards(self, nick, A, B):
@@ -550,6 +550,7 @@ class Game(object):
             self.deck = self.deck[card_count:]
 
         pub += self.get_table()[0]
+        priv += self.get_hands()[1]
 
         return (pub, priv)
 
