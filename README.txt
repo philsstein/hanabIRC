@@ -10,18 +10,23 @@ Installing and running the hanabot:
 To run the game on your own channel do the following:
 
 Download and install hanabIRC and dependencies:
+
 > sudo pip install hanabIRC
 
 Generate a default configuration file:
+
 > sudo hanabIRC --makeconf > /etc/hanabIRC.conf
 
 Edit the default configuration:
+
 > vi /etc/hanabIRC.conf
 
 Run the bot:
+
 > hanabIRC
 
 You may want to save the log file and run it in the background:
+
 > hanabIRC 2>&1 > hanabIRC.log & 
 
 History
