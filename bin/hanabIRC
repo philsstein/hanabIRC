@@ -43,6 +43,7 @@ def make_conf():
     parser.set(section, 'notify_channel', 'boardgames')
     parser.set(section, 'nick', 'hanabot')
     parser.set(section, 'nick_pass', 'PASSWORD')
+    parser.set(section, 'topic', 'Welcome to Hanabi on IRC')
     parser.write(sys.stdout)
 
 if __name__ == "__main__":
@@ -102,6 +103,7 @@ if __name__ == "__main__":
     configfiles = [os.path.expanduser('~/.%s' % conffilename),
                    '/etc/%s' % conffilename,
                    conffilename]
+
     if args.conffile:
         configfiles.insert(0, args.conffile)
 
@@ -122,6 +124,7 @@ if __name__ == "__main__":
     channel = confparse.get('general', 'channel')
     nick = confparse.get('general', 'nick')
     nick_pass = confparse.get('general', 'nick_pass')
+    topic = confparse.get('general', 'topic')
 
     server = args.server if args.server else server
     channel = args.channel if args.channel else channel
@@ -133,5 +136,5 @@ if __name__ == "__main__":
     # notify_port = args.notify_port if args.notify_port else conf.notify_port
 
     # ok - now we can do some actual work.
-    bot = Hanabot(server, channel, nick, nick_pass)
+    bot = Hanabot(server, channel, nick, nick_pass, topic=topic)
     bot.start()
