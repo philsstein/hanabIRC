@@ -249,6 +249,7 @@ class Game(object):
         self.turn_order.append(self.turn_order.pop(0))
 
         pub += self.get_table()[0]
+	priv += self.get_hands()[1]
 
         if self._is_game_over():
             self._end_game(pub, priv)
@@ -291,6 +292,7 @@ class Game(object):
         self.turn_order.append(self.turn_order.pop(0))
 
         pub += self.get_table()[0]
+	priv += self.get_hands()[1]
 
         if self._is_game_over():
             self._end_game(pub, priv)
@@ -370,13 +372,14 @@ class Game(object):
         plural = 's ' if len(cards) > 1 else ' '
         is_are = 'are ' if len(cards) > 1 else 'is '
         a = 'a ' if isinstance(hint, int) else ''
-        pub.append('%s has given %s a hint: your card%s%s %s%s%s' % (
+        pub.append('======== %s has given %s a hint: your card%s%s %s%s%s' % (
                    (nick, player, plural, ', '.join([c.mark for c in cards]), is_are, 
                     a, str(hint))))
         self.turn_order.append(self.turn_order.pop(0))
         self._flip(self.notes, self.notes_up, self.notes_down)
 
         pub += self.get_table()[0]
+	priv += self.get_hands()[1]
         return (pub, priv)
 
     def swap_cards(self, nick, A, B):
