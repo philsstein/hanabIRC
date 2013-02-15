@@ -3,7 +3,7 @@ from setuptools import find_packages
 
 setup(
     name='HanabIRC',
-    version='0.1.1',
+    version='0.1.2',
     packages=find_packages(exclude=['*test']),
     license='FreeBSD License', 
     author='Geoff Lawler', 
@@ -12,5 +12,5 @@ setup(
     long_description=open('README.txt').read(),
     url='https://github.com/philsstein/hanabIRC',
     install_requires=['irc'],
-    scripts=['bin/runHanabot']
+    scripts=['bin/hanabIRC']
 )
