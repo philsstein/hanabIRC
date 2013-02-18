@@ -446,11 +446,16 @@ class Hanabot(SingleServerIRCBot):
 
     def handle_start(self, args, event):
         log.debug('got start event')
-        if not self._check_args(args, 0, [], event, 'start'):
+        opts = dict()
+        if len(args):
+            for a in args:
+                opts[a] = True
+        elif not self._check_args(args, 0, [], event, 'start'):
             return 
 
         nick = event.source.nick
-        self._display(self.games[event.target].start_game(nick), event)
+        opts = opts if len(opts) else None
+        self._display(self.games[event.target].start_game(nick, opts), event)
 
     def handle_part(self, args, event):
         log.debug('got part event')
@@ -507,7 +512,7 @@ class Hanabot(SingleServerIRCBot):
         'new': '!new [channel] - create a new game. If channel is given, hanabot will join that channel. (Then use !new in that channel to create a new game there.)', 
         'delete': '!delete - delete a game.', 
         'join': '!join - join a game. If not game in channel, use !new to create one.', 
-        'start': '!start - start a game. The game must have at least two players.',
+        'start': '!start [rainbow] - start a game. The game must have at least two players. If rainbow is given, the rainbow cards will be used in the game.',
         'leave': '!leave - leave a game. This is bad form.', 
         'part': '!part - tell Hanabot to part the channel. Note: Hanbot will not leave its home channel.', 
         'move': '!move card - move a card in your hand and slide all other cards "right". "card" must be one of A, B, C, D, or E. "index" is where to put the card, counting from the left and must be an integer between 1 and max hand size.',

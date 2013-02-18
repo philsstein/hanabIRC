@@ -44,13 +44,17 @@ class Card(object):
         self.markup = irc_markup()
 
     def front(self):
-        return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color)
+        # special case rainbow.
+        if self.color == 'rainbow':
+            return '%s%d' % ('RNBW', self.number)
+        else:
+            return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color)
 
     def back(self):
         return '%s' % self.mark
 
     def __str__(self):
-        return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color) + '/%s' % self.mark
+        return '%s/%s' % (self.front(), self.back())
 
 class Player(object):
     '''
@@ -191,7 +195,7 @@ class Game(object):
         # table is a dict of lists of cards, indexed by color. 
         self.table = defaultdict(list)
 
-        self.discards = list()     # list of Cards
+        self.discards = list()   # list of Cards
 
     def in_game(self, nick):
         '''Return True is nick is in the game, False otherwise.'''
@@ -249,7 +253,7 @@ class Game(object):
         self.turn_order.append(self.turn_order.pop(0))
 
         pub += self.get_table()[0]
-        priv += self.get_hands()[1]
+        priv += self.get_hands(nick)[1]
 
         if self._is_game_over():
             self._end_game(pub, priv)
@@ -292,7 +296,7 @@ class Game(object):
         self.turn_order.append(self.turn_order.pop(0))
 
         pub += self.get_table()[0]
-        priv += self.get_hands()[1]
+        priv += self.get_hands(nick)[1]
 
         if self._is_game_over():
             self._end_game(pub, priv)
@@ -379,7 +383,7 @@ class Game(object):
         self._flip(self.notes, self.notes_up, self.notes_down)
 
         pub += self.get_table()[0]
-        priv += self.get_hands()[1]
+        priv += self.get_hands(nick)[1]
         return (pub, priv)
 
     def swap_cards(self, nick, A, B):
@@ -522,7 +526,7 @@ class Game(object):
 
         return (pub, priv)
 
-    def start_game(self, nick):
+    def start_game(self, nick, opts=None):
         '''Start an existing game. Will fail if called by someone not in the game
         or if there are not enough players.'''
         pub, priv = [], []
@@ -534,6 +538,19 @@ class Game(object):
             priv.append('The game has already begun.')
             return (pub, priv)
 
+        if opts:
+            for opt, val in opts.iteritems():
+                # only one valid option for now.
+                if opt == 'rainbow':
+                    pub.append('Adding rainbow cards to the deck')
+                    Game.colors.append('rainbow')
+                    self.deck += [Card('rainbow', i) for i in xrange(1,6)]
+                    random.shuffle(self.deck)
+                else:
+                    pub.append('Invalid option to start command: %s' % opt)
+                    pub.append('Game not started.')
+                    return pub, priv
+
         if len(self._players) > 1:
             self._playing = True
             pub.append('The Hanabi game has started!')
@@ -541,7 +558,7 @@ class Game(object):
         else:
             priv.append('There are not enough players in the game, not starting.')
             return (pub, priv)
-        
+       
         card_count = 5 if len(self._players) < 4 else 4
         for player in self._players.values():
             for c in self.deck[:card_count]:
@@ -550,7 +567,7 @@ class Game(object):
             self.deck = self.deck[card_count:]
 
         pub += self.get_table()[0]
-        priv += self.get_hands()[1]
+        priv += self.get_hands(nick)[1]
 
         return (pub, priv)
 

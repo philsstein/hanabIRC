@@ -38,10 +38,14 @@ History
 	- Added mutli-channel support. Hanbot can now run in multiple channels, keeping track of multiple games.
 	- Enforce one person per game
 	- Use NOTICE instead of prvimsg to display text inline to user/channel.
+* 2013-02-14 - Version 0.1.4 - added support for rainbow cards. When starting a game, add "rainbow" to start command to use them: "!start rainbow".
 
 
 TODO:
 -----
+- add support for telling non command issuer stuff. 
+	This could be used to show hands to all players
+	after a !play, for example.
 - do not print hint to channel if given in a PRIVMSG
 - add total time game took at end game?
 - keep stats?
