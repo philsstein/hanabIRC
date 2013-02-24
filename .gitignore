@@ -1,5 +1,6 @@
 *.pyc
 *.swp
+*.un~
 tags
 hanabIRC.conf
 HanabIRC.egg-info/
