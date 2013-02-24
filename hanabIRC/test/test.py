@@ -3,25 +3,28 @@
     Just test for simple syntax and edge case errors 
     by running through a few scenarios.
 '''
+import os
+import sys
+sys.path.insert(0, os.path.join(sys.path[0], '..'))
+
 from string import uppercase
 from hanabi import Game, Player, Card
+from text_markup import xterm_markup
 
-def display(lists):
-    for lines in [('Public:', lists[0]), ('Private:', lists[1])]:
-        print lines[0]
-        if not len(lines[1]):
-            print '\t ---'
-        else:
-            for l in lines[1]:
-                print '\t', l
+# tell the cards to color for xterm
+Card.markup = xterm_markup()
 
-def show_hands(g):
-    hands = [p.get_hand() for p in g._players.values()]
-    hidden = [p.get_hand(hidden=True) for p in g._players.values()]
-    print ' --- '
-    print ' Hands: %s' % ', '.join(hands)
-    print 'Hidden: %s' % ', '.join(hidden)
-    print ' --- '
+def display(gr):
+    print '------------------'
+    if not gr:
+        print 'Response invalid.'
+    else:
+        for message in gr.public:
+            print 'channel: %s' % message
+
+        for nick, messages in gr.private.iteritems():
+            for message in messages:
+                print '%s: %s' % (nick, message)
 
 def show_game(num_players, win=True):
     g = Game()
@@ -44,7 +47,6 @@ def show_game(num_players, win=True):
                 else:
                     g._players[p].hand[0] = Card(c, 6-i, 'A')
 
-                show_hands(g)
                 print '%s playing card A' % p
                 display(g.play_card(p, 'A'))
                 if g._is_game_over():

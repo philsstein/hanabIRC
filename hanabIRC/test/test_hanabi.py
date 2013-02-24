@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+import os
+import sys
+sys.path.insert(0, os.path.join(sys.path[0], '..'))
+
 import unittest2
 from string import uppercase
 from hanabi import Game, Player, Card
