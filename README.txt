@@ -43,16 +43,11 @@ History
 
 TODO:
 -----
-- add support for telling non command issuer stuff. 
-	This could be used to show hands to all players
-	after a !play, for example.
 - do not print hint to channel if given in a PRIVMSG
 - add total time game took at end game?
 - keep stats?
 - add user-configured color to the bot
-- PM user with updated hands when it is their turn
 - add !replace command to replace people in-game
 - add actual rules text
 - make sure when a player leaves, they do not still get PMs.
 - When you run out of cards, everyone gets one more turn.
-

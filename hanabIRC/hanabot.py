@@ -19,6 +19,7 @@ import traceback
 from collections import defaultdict
 
 from hanabi import Game
+from GameResponse import GameResponse
 from irc.bot import SingleServerIRCBot
 from irc.client import VERSION as irc_client_version
 
@@ -92,7 +93,23 @@ class Hanabot(SingleServerIRCBot):
 
     def on_privmsg(self, conn, event):
         log.debug('got privmsg. %s -> %s', event.source, event.arguments)
-        self.on_pubmsg(event, event)
+        # If this is a priv msg, we need to reset the event to look
+        # like a channel message. 
+        if str(event.target) == self.nick_name:
+            for chan, game in self.games.iteritems():
+                if game.in_game(event.source.nick):
+                    event.target = chan
+                    break
+
+            else:
+                # note: this else is on the for() not the if()
+                msg = ('If you are not in a game (in a channel) I cannot map this private '
+                      'message to a channel or a game, so I have no context to respond. Join '
+                      'a game and try again.')
+                self._to_nick(event, msg)
+                return
+
+        self.on_pubmsg(conn, event)
 
     def on_pubmsg(self, conn, event):
         try:
@@ -166,29 +183,25 @@ class Hanabot(SingleServerIRCBot):
                 self._to_chan(event, err)
 
     # some sugar for sending msgs
-    def _display(self, output, event):
-        '''Output is the list of (public, private) msgs generated
-        byt the Game engine. nick is the user to priv message.
-        output == (string list, string list).'''
-        for l in output[0]:
-            self.connection.notice(event.target, l)
-
-        for l in output[1]:
-            self.connection.notice(event.source.nick, l)
+    def _display(self, response, event):
+        '''response is a GameResponse instance. event is an irclib event, which gives us nick and channel.'''
+        if not response:
+            log.error('Got False response, not displaying output.')
+        else:
+            for line in response.public:
+                self.connection.notice(event.target, line)
+            
+            for nick, lines in response.private.iteritems():
+                for line in lines:
+                    self.connection.notice(nick, line)
 
     # some sugar for sending msgs
     def _to_chan(self, event, msgs):
-        if isinstance(msgs, list):
-            self._display((msgs, []), event)
-        elif isinstance(msgs, (str, unicode)):
-            self._display(([msgs], []), event)
+        self._display(GameResponse(msgs), event)
 
     # some sugar for sending strings
     def _to_nick(self, event, msgs):
-        if isinstance(msgs, list):
-            self._display(([], msgs), event)
-        elif isinstance(msgs, (str, unicode)):
-            self._display(([], [msgs]), event)
+        self._display(GameResponse(private={event.source.nick: msgs}), event)
 
     # Game Commands
     #############################################################
@@ -254,12 +267,12 @@ class Hanabot(SingleServerIRCBot):
                       'english-translation')
 
     def _game_state(self, channel):
-        pub, priv = [], []
+        ret = GameResponse()
         log.debug('game_state: chan: %s (%s), games: %s', channel, type(channel), self.games)
         if channel not in self.games:
-            pub.append('There is no game being played in %s. '
+            ret.public.append('There is no game being played in %s. '
                        'Use !new to start one while in %s.' % (channel, channel))
-            return pub, priv
+            return ret
 
         game = self.games[channel]
         state = 'being played' if game.has_started() else 'waiting for players'
@@ -276,8 +289,8 @@ class Hanabot(SingleServerIRCBot):
             s = ('Game is active and being played by players %s. %s' %
                  (', '.join(game.players()), turn))
 
-        pub.append(s)
-        return pub, priv
+        ret.public.append(s)
+        return ret
 
     def handle_game(self, args, event):
         log.debug('got game event. args: %s', args)
@@ -336,12 +349,6 @@ class Hanabot(SingleServerIRCBot):
         nick = event.source.nick
         self._display(self.games[event.target].play_card(nick, args[0]), event)
 
-        # tell the next player it is their turn.
-        # take what would be public and make it privmsg
-        pub, priv = self.games[event.target].turn()
-        if len(pub):
-            self._display(([], pub), event)
-
         # playing a card can trigger end game.
         if self.games[event.target].game_over():
             self.games[event.target] = None 
@@ -379,8 +386,7 @@ class Hanabot(SingleServerIRCBot):
         
         log.info('Starting new game.')
         self.games[event.target] = Game()
-        pub = ['New game started by %s. Accepting joins.' % nick]
-        self._display((pub, []), event)
+        self._display(GameResponse('New game started by %s. Accepting joins.' % nick), event)
 
     def handle_join(self, args, event):
         '''join a game, if one is active.'''
@@ -480,7 +486,7 @@ class Hanabot(SingleServerIRCBot):
             return 
 
         nick = event.source.nick
-        self._display(self.games[event.target].get_discard_pile(), event)
+        self._display(self.games[event.target].get_discard_pile(nick), event)
 
     def _check_args(self, args, num, types, event, cmd):
         '''Check the given arguments for correct types and number. Show error
@@ -530,3 +536,8 @@ class Hanabot(SingleServerIRCBot):
         'discardpile': '!discardpile - show the current discard pile.',
         'grue': 'You are likely to be eaten.',
     }
+
+if __name__ == "__main__":
+    # Currently there is no doctest here. This is for catching systax errors.
+    import doctest
+    doctest.testmod()
