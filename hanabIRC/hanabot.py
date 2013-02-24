@@ -88,8 +88,10 @@ class Hanabot(SingleServerIRCBot):
 
     def on_join(self, conn, event):
         log.debug('got on_join: %s %s', conn, event)
-        if self.topic:
-            self.connection.topic(event.target, self.topic)
+        # This is not the proper spot for this. This is when anyone
+        # joins, not the bot. 
+        # if self.topic:
+        #     self.connection.topic(event.target, self.topic)
 
     def on_privmsg(self, conn, event):
         log.debug('got privmsg. %s -> %s', event.source, event.arguments)
