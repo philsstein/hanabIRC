@@ -52,4 +52,7 @@ TODO:
 - add user-configured color to the bot
 - PM user with updated hands when it is their turn
 - add !replace command to replace people in-game
+- add actual rules text
+- make sure when a player leaves, they do not still get PMs.
+- When you run out of cards, everyone gets one more turn.
 
