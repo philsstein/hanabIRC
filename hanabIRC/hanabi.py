@@ -191,6 +191,10 @@ class Game(object):
 
         self.discards = list()   # list of Cards
 
+        # last_round set to 0 when deck is empty and incremented each turn
+        # when last_round == num players, the game is over.
+        self.last_round = None
+
     def in_game(self, nick):
         '''Return True is nick is in the game, False otherwise.'''
         return nick in self._players.keys()
@@ -237,7 +241,11 @@ class Game(object):
             return retVal
             
         c = self._players[nick].hand.pop(i)
-        self._players[nick].add_card(self.deck.pop(0))
+        if len(self.deck):
+            self._players[nick].add_card(self.deck.pop(0))
+        else:
+            self.last_round = self.last_round + 1 if self.last_round is not None else 1
+
         retVal.public.append('%s has discarded %s' % (nick, str(c)))
         self.discards.append(c)
         self._flip(self.notes, self.notes_down, self.notes_up)
@@ -283,8 +291,12 @@ class Game(object):
             self._flip(self.storms, self.storms_down, self.storms_up)
             self.discards.insert(0, c)
 
-        self._players[nick].add_card(self.deck.pop(0))
-        retVal.public.append('%s drew a new card from the deck into his or her hand.' % nick)
+        if len(self.deck):
+            self._players[nick].add_card(self.deck.pop(0))
+            retVal.public.append('%s drew a new card from the deck into his or her hand.' % nick)
+        else:
+            self.last_round = self.last_round + 1 if self.last_round is not None else 1
+
         self.turn_order.append(self.turn_order.pop(0))
         retVal.merge(self.get_table())
 
@@ -506,7 +518,8 @@ class Game(object):
             retVal.public.append('Now that there are fewer than four players, everyone gets '
                        'another card. Adding card to each player\s hand.')
             for p in self._players.values():
-                p.add_card(self.deck.pop(0))
+                if len(self.deck):
+                    p.add_card(self.deck.pop(0))
 
         if self._playing:
             if nick == self.turn_order[0]:
@@ -577,7 +590,7 @@ class Game(object):
 
     def _is_game_over(self):
         '''Return True if an end game condition is true.'''
-        if not len(self.deck):
+        if self.last_round is not None and self.last_round == len(self._players):
             return True
         elif self._rainbow_game and 30 == sum([len(cs) for cs in self.table.values()]):
             return True

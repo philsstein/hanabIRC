@@ -37,13 +37,21 @@ class test_hanabi(unittest2.TestCase):
         print p.swap_cards('A', 'E')
         self.assertEqual('EBCDA', self.getBacks(p.hand))
 
-
     def test_play(self):
         self.setUpGame()
         print self.game.turn()
         print self.game.play_card(players[0], 'A')
         print self.game.turn()
         print self.game.hint_player(players[1], players[0], 'blue')
+
+    def test_lastround(self):
+        self.setUpGame()
+        self.game.deck = []
+        for i in xrange(len(players)):
+            self.assertFalse(self.game.game_over())
+            self.game.discard_card(self.game.player_turn(), 'A')
+
+        self.assertTrue(self.game.game_over())
 
 if __name__ == '__main__':
     unittest2.main()

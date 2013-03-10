@@ -265,8 +265,8 @@ class Hanabot(SingleServerIRCBot):
             return 
 
         self._to_nick(event, 'Go here for english rules: '
-                      'http://boardgamegeek.com/filepage/59655/hanabi-'
-                      'english-translation')
+                      'http://boardgamegeek.com/filepage/85023/english-translation-of-'
+                      'abacusspiele-german-rules')
 
     def _game_state(self, channel):
         ret = GameResponse()
