@@ -42,6 +42,8 @@ History
 * 2013-02-24 - Version 0.1.5 - added support for hanabot talking to all players during move. Current player notified when it is his/her turn. Fixed
 	bug that caused Hanabot to ignore privmsgs. Everyone now gets notified of all player's hands at the start of a turn.
 * 2013-03-10 - Version 0.1.6 - everyone now gets one more turn when the deck empties before the game ends.
+* 2013-03-10 - Version 0.1.7 - notify channel works. If "notify_channel" given in the configuration file, that channel will get a notification
+    when a new game begins (regardless of which channel it starts in.) 
 
 
 TODO:

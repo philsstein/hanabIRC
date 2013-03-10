@@ -3,10 +3,10 @@ from setuptools import find_packages
 
 setup(
     name='HanabIRC',
-    version='0.1.6',
+    version='0.1.7',
     packages=find_packages(exclude=['*test']),
     license='FreeBSD License', 
-    author='Geoff Lawler', 
+    author='Phil S. Stein', 
     author_email='phil.s.stein@gmail.com',
     description='An IRC bot that organizes and plays the card game Hanabi.',
     long_description=open('README.txt').read(),
