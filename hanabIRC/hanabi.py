@@ -59,6 +59,13 @@ class Card(object):
     def __str__(self):
         return '%s/%s' % (self.front(), self.back())
 
+    def __lt__(self, other):
+        '''sort by color then number'''
+        if self.color == other.color:
+            return self.number < other.number
+        else:
+            return self.color < other.color
+
 class Player(object):
     '''
         If the player themselves is requesting to see the hand, they get
@@ -248,6 +255,7 @@ class Game(object):
 
         retVal.public.append('%s has discarded %s' % (nick, str(c)))
         self.discards.append(c)
+        self.discards.sort()
         self._flip(self.notes, self.notes_down, self.notes_up)
         self.turn_order.append(self.turn_order.pop(0))
 
@@ -289,7 +297,8 @@ class Game(object):
             retVal.public.append('%s guessed wrong with %s! One storm token '
                           'flipped up!' % (nick, str(c)))
             self._flip(self.storms, self.storms_down, self.storms_up)
-            self.discards.insert(0, c)
+            self.discards.append(c)
+            self.discards.sort()
 
         if len(self.deck):
             self._players[nick].add_card(self.deck.pop(0))
@@ -462,7 +471,7 @@ class Game(object):
             ret.public.append('Table: %s' % ', '.join(cardstrs))
 
         ret.public.append('Notes: %s, Storms: %s, %d cards remaining.' %
-                         (''.join(self.notes), ''.join(self.storms), len(self.deck)))
+                         (''.join(sorted(self.notes)), ''.join(sorted(self.storms)), len(self.deck)))
 
         if len(self.discards):
             ret.public.append('Discard pile: %s. (size is %d)' %
@@ -648,7 +657,10 @@ class Game(object):
     def _in_game_is_turn(self, nick, response):
         '''Return True if the player is in the game and is his/her turn
         else return False.'''
-        if not nick in self._players.keys():
+        if not self._playing or self._game_over:
+            reponse.private('The game is not active.')
+            return False
+        elif not nick in self._players.keys():
             response.private[nick].append('You are not in game.')
             return False
         elif not self._playing:
