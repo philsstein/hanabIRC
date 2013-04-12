@@ -375,7 +375,7 @@ class Hanabot(SingleServerIRCBot):
         log.debug('got new game event')
 
         if len(args) == 1:
-            chan = '#%s' % args[0]
+            chan = args[0] if args[0][0] == '#' else '#' + args[0]
             self.connection.join(chan)
             self._to_chan(event, 'Hanabot joined channel %s. /join %s and !new '
                           'to begin game there.' % (chan, chan))
