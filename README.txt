@@ -39,11 +39,11 @@ History
 	- Enforce one person per game
 	- Use NOTICE instead of prvimsg to display text inline to user/channel.
 * 2013-02-14 - Version 0.1.4 - added support for rainbow cards. When starting a game, add "rainbow" to start command to use them: "!start rainbow".
-* 2013-02-24 - Version 0.1.5 - added support for hanabot talking to all players during move. Current player notified when it is his/her turn. Fixed
-	bug that caused Hanabot to ignore privmsgs. Everyone now gets notified of all player's hands at the start of a turn.
+* 2013-02-24 - Version 0.1.5 - added support for hanabot talking to all players during move. Current player notified when it is his/her turn. Fixed bug that caused Hanabot to ignore privmsgs. Everyone now gets notified of all player's hands at the start of a turn.
 * 2013-03-10 - Version 0.1.6 - everyone now gets one more turn when the deck empties before the game ends.
-* 2013-03-10 - Version 0.1.7 - notify channel works. If "notify_channel" given in the configuration file, that channel will get a notification
-    when a new game begins (regardless of which channel it starts in.) 
+* 2013-03-11 - Version 0.1.7 - notify channel works. If "notify_channel" given in the configuration file, that channel will get a notification when a new game begins (regardless of which channel it starts in.) 
+* 2013-04-12 - Version 0.1.8 - sort discard pile, notes, and storms. 
+* 2013-04-12 - Version 0.1.9 - Dicard pile display is more compact. Can add 5 or 10 rainbow cards (instead of just 5). Post-game action bug squashed. 
 
 
 TODO:
