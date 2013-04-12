@@ -177,8 +177,9 @@ class Hanabot(SingleServerIRCBot):
                 method(cmds[1:], event)
 
                 # clear possibly ended game after action.
-                if self.games[event.target].game_over():
-                    del self.games[event.target] 
+                if event.target in self.games:
+                    if self.games[event.target].game_over():
+                        del self.games[event.target] 
 
         except Exception, e:
             exc_type, exc_value, exc_tb = sys.exc_info()
