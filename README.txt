@@ -43,7 +43,7 @@ History
 * 2013-03-10 - Version 0.1.6 - everyone now gets one more turn when the deck empties before the game ends.
 * 2013-03-11 - Version 0.1.7 - notify channel works. If "notify_channel" given in the configuration file, that channel will get a notification when a new game begins (regardless of which channel it starts in.) 
 * 2013-04-12 - Version 0.1.8 - sort discard pile, notes, and storms. 
-* 2013-04-12 - Version 0.1.9 - Dicard pile display is more compact. Can add 5 or 10 rainbow cards (instead of just 5). Post-game action bug squashed. 
+* 2013-04-12 - Version 0.1.9 - Dicard pile display is more compact. Can add 5 or 10 rainbow cards (instead of just 5). Post-game action bug squashed. Do not prefix # to channel in !new if it is already there.
 
 
 TODO:
