@@ -196,7 +196,8 @@ class Game(object):
         # table is a dict of lists of cards, indexed by color. 
         self.table = defaultdict(list)
 
-        self.discards = list()   # list of Cards
+        # discards is just a set of numbers (1-5) indexed by color.
+        self.discards = defaultdict(list)
 
         # last_round set to 0 when deck is empty and incremented each turn
         # when last_round == num players, the game is over.
@@ -254,8 +255,8 @@ class Game(object):
             self.last_round = self.last_round + 1 if self.last_round is not None else 1
 
         retVal.public.append('%s has discarded %s' % (nick, str(c)))
-        self.discards.append(c)
-        self.discards.sort()
+        self.discards[c.color].append(c.number)
+        self.discards[c.color].sort()
         self._flip(self.notes, self.notes_down, self.notes_up)
         self.turn_order.append(self.turn_order.pop(0))
 
@@ -297,8 +298,8 @@ class Game(object):
             retVal.public.append('%s guessed wrong with %s! One storm token '
                           'flipped up!' % (nick, str(c)))
             self._flip(self.storms, self.storms_down, self.storms_up)
-            self.discards.append(c)
-            self.discards.sort()
+            self.discards[c.color].append(c.number)
+            self.discards[c.color].sort()
 
         if len(self.deck):
             self._players[nick].add_card(self.deck.pop(0))
@@ -450,12 +451,20 @@ class Game(object):
 
     def get_discard_pile(self, nick):
         retVal = gr()
-        if not len(self.discards):
+        if not len(self.discards.keys()):
             retVal.private[nick].append('There are no cards in the discard pile.')
             return retVal
 
-        retVal.private[nick].append('Discards: %s' % ', '.join([c.front() for c in self.discards]))
+        retVal.private[nick].append(self._get_discards_string())
         return retVal
+
+    def _get_discards_string(self):
+        # display like: R123, W234, B45
+        cards = list()
+        for color, numbers in self.discards.iteritems():
+            cards.append(color[0].upper() + ''.join(str(x) for x in numbers))
+
+        return 'Discards: %s' % ', '.join(cards)
 
     def get_table(self):
         ret = gr()
@@ -473,9 +482,8 @@ class Game(object):
         ret.public.append('Notes: %s, Storms: %s, %d cards remaining.' %
                          (''.join(sorted(self.notes)), ''.join(sorted(self.storms)), len(self.deck)))
 
-        if len(self.discards):
-            ret.public.append('Discard pile: %s. (size is %d)' %
-                             (', '.join([c.front() for c in self.discards]), len(self.discards)))
+        if len(self.discards.keys()):
+            ret.public.append(self._get_discards_string())
 
         ret.merge(self.turn())
 
@@ -553,11 +561,17 @@ class Game(object):
         if opts:
             for opt, val in opts.iteritems():
                 # only one valid option for now.
-                if opt == 'rainbow':
+                if opt.startswith('rainbow'):
                     self._rainbow_game = True
-                    retVal.public.append('Adding rainbow cards to the deck')
                     Game.colors.append('rainbow')
-                    self.deck += [Card('rainbow', i) for i in xrange(1,6)]
+                    if opt.endswith('5'):
+                        retVal.public.append('Adding 5 rainbow cards to the deck')
+                        self.deck += [Card('rainbow', i) for i in xrange(1,6)]
+                    else:
+                        retVal.public.append('Adding 10 rainbow cards to the deck')
+                        self.deck += [Card('rainbow', i) for i in xrange(1,6)]
+                        self.deck += [Card('rainbow', i) for i in xrange(1,6)]
+
                     random.shuffle(self.deck)
                 else:
                     retVal.public.append('Invalid option to start command: %s' % opt)

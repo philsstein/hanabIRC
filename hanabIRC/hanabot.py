@@ -176,6 +176,10 @@ class Hanabot(SingleServerIRCBot):
                 # invoke it!
                 method(cmds[1:], event)
 
+                # clear possibly ended game after action.
+                if self.games[event.target].game_over():
+                    del self.games[event.target] 
+
         except Exception, e:
             exc_type, exc_value, exc_tb = sys.exc_info()
             filename, line_num, func_name, text = traceback.extract_tb(exc_tb)[-1]
@@ -243,6 +247,7 @@ class Hanabot(SingleServerIRCBot):
                 'The game continues until the deck is empty, all the cards '
                 'are correcly displayed on the table, or the three storm '
                 'tokens have been flipped.')
+            usage.append('The bot supports rainbow cards. !help start for details.')
             for text, cmds in self.command_dict.iteritems():
                 usage.append('%s commands: %s' % (text, ', '.join(cmds)))
 
@@ -343,10 +348,6 @@ class Hanabot(SingleServerIRCBot):
         nick = event.source.nick
         self._display(self.games[event.target].discard_card(nick, args[0]), event)
 
-        # discarding a card can trigger end game.
-        if self.games[event.target].game_over():
-            self.games[event.target] = None 
-
     def handle_play(self, args, event):
         log.debug('got play event. args: %s', args)
         # play the card and show the repsonse
@@ -356,10 +357,6 @@ class Hanabot(SingleServerIRCBot):
         nick = event.source.nick
         self._display(self.games[event.target].play_card(nick, args[0]), event)
 
-        # playing a card can trigger end game.
-        if self.games[event.target].game_over():
-            self.games[event.target] = None 
-    
     def handle_hands(self, args, event):
         ''' Show hands of current game.  '''
         log.debug('got hands event. args: %s', args)
@@ -432,10 +429,6 @@ class Hanabot(SingleServerIRCBot):
         nick = event.source.nick
         # remove the player and display the result
         self._display(self.games[event.target].remove_player(nick), event)
-
-        # removing a player can trigger end game (if there is now only one player).
-        if self.games[event.target].game_over():
-            self.games[event.target] = None
 
     def handle_sort(self, args, event):
         '''arg format: []'''
@@ -533,7 +526,7 @@ class Hanabot(SingleServerIRCBot):
         'new': '!new [channel] - create a new game. If channel is given, hanabot will join that channel. (Then use !new in that channel to create a new game there.)', 
         'delete': '!delete - delete a game.', 
         'join': '!join - join a game. If not game in channel, use !new to create one.', 
-        'start': '!start [rainbow] - start a game. The game must have at least two players. If rainbow is given, the rainbow cards will be used in the game.',
+        'start': '!start [rainbow_5 | rainbow_10] - start a game. The game must have at least two players. If rainbow_5 is given, 5 rainbow cards will be added to the deck. If rainbow_10 is given, 10 rainbow cards will be added.',
         'leave': '!leave - leave a game. This is bad form.', 
         'part': '!part - tell Hanabot to part the channel. Note: Hanbot will not leave its home channel.', 
         'move': '!move card - move a card in your hand and slide all other cards "right". "card" must be one of A, B, C, D, or E. "index" is where to put the card, counting from the left and must be an integer between 1 and max hand size.',
