@@ -298,7 +298,7 @@ class Hanabot(SingleServerIRCBot):
                 s = ('Waiting for players in %s, no players have '
                      'joined yet.' % channel)
         else:
-            turn = game.turn()[0][0]
+            turn = game.turn().public[0]
             s = ('Game is active and being played by players %s. %s' %
                  (', '.join(game.players()), turn))
 
