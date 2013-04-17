@@ -235,6 +235,15 @@ class Game(object):
         '''return a list of player ids in the game.'''
         return self._players.keys()
 
+    def stop_game(self, nick):
+        retVal = gr()
+        if not nick in self._players.keys():
+            retVal.public.append('You must be in the game to stop it.')
+        else:
+            retVal.merge(self._end_game())
+
+        return retVal
+
     def discard_card(self, nick, X):
         '''Discard the card with ID X.'''
         retVal = gr()

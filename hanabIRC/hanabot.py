@@ -50,7 +50,7 @@ class Hanabot(SingleServerIRCBot):
 
         # valid bot commands
         self.command_dict = {
-            'Game Management': ['new', 'delete', 'join', 'start', 'leave', 'part'],
+            'Game Management': ['new', 'delete', 'join', 'start', 'stop', 'leave', 'part'],
             'Hand Management': ['move', 'swap', 'sort'],
             'Game Action': ['play', 'hint', 'discard'],
             'Information': ['help', 'rules', 'turn', 'turns', 'game',
@@ -321,6 +321,13 @@ class Hanabot(SingleServerIRCBot):
         for chan in self.channels.keys():
             self._display(self._game_state(str(chan)), event)
 
+    def handle_stop(self, args, event):
+        if not self._check_args(args, 0, [], event, 'stop'):
+            return 
+
+        nick = event.source.nick
+        self._display(self.games[event.target].stop_game(nick), event)
+
     def handle_turn(self, args, event):
         if not self._check_args(args, 0, [], event, 'turn'):
             return 
@@ -528,6 +535,7 @@ class Hanabot(SingleServerIRCBot):
         'delete': '!delete - delete a game.', 
         'join': '!join - join a game. If not game in channel, use !new to create one.', 
         'start': '!start [rainbow_5 | rainbow_10] - start a game. The game must have at least two players. If rainbow_5 is given, 5 rainbow cards will be added to the deck. If rainbow_10 is given, 10 rainbow cards will be added.',
+        'stop': 'Immediately score a game, then stop/kill it.',
         'leave': '!leave - leave a game. This is bad form.', 
         'part': '!part - tell Hanabot to part the channel. Note: Hanbot will not leave its home channel.', 
         'move': '!move card - move a card in your hand and slide all other cards "right". "card" must be one of A, B, C, D, or E. "index" is where to put the card, counting from the left and must be an integer between 1 and max hand size.',
