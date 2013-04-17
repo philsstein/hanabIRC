@@ -44,6 +44,7 @@ History
 * 2013-03-11 - Version 0.1.7 - notify channel works. If "notify_channel" given in the configuration file, that channel will get a notification when a new game begins (regardless of which channel it starts in.) 
 * 2013-04-12 - Version 0.1.8 - sort discard pile, notes, and storms. 
 * 2013-04-12 - Version 0.1.9 - Dicard pile display is more compact. Can add 5 or 10 rainbow cards (instead of just 5). Post-game action bug squashed. Do not prefix # to channel in !new if it is already there.
+* 2013-04-17 - Version 0.1.10 - Display table in same compact form as the discard pile. New command !stop immediately stops and scores the game. Only players can !stop a game. 
 
 
 TODO:
