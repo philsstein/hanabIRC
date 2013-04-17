@@ -288,6 +288,7 @@ class Game(object):
         c = self._players[nick].hand.pop(i)
         if self._is_valid_play(c):
             self.table[c.color].append(c)
+            self.table[c.color].sort()
             retVal.public.append('%s successfully added %s to the %s group.' %
                        (nick, str(c), c.color))
             if len(self.table[c.color]) == 5:
@@ -462,22 +463,23 @@ class Game(object):
         # display like: R123, W234, B45
         cards = list()
         for color, numbers in self.discards.iteritems():
-            cards.append(color[0].upper() + ''.join(str(x) for x in numbers))
+            cards.append(irc_markup().color(
+                color[0].upper() + ''.join(str(x) for x in numbers), color))
 
         return 'Discards: %s' % ', '.join(cards)
 
     def get_table(self):
         ret = gr()
-        # GTL - this could be done in a confusing list comprehension.
-        cardstrs = list()
-        for cardstack in self.table.values():
-            if len(cardstack):
-                cardstrs.append(''.join([c.front() for c in cardstack]))
+        table = list()
+        for color, cards in self.table.iteritems():
+            nums = ''.join(sorted([str(c.number) for c in cards]))
+            if nums:
+                table.append(irc_markup().color(color.upper()[0] + nums, color))
 
-        if not cardstrs:
+        if not table:
             ret.public.append('Table: empty')
         else:
-            ret.public.append('Table: %s' % ', '.join(cardstrs))
+            ret.public.append('Table: %s' % ', '.join(table))
 
         ret.public.append('Notes: %s, Storms: %s, %d cards remaining.' %
                          (''.join(sorted(self.notes)), ''.join(sorted(self.storms)), len(self.deck)))
