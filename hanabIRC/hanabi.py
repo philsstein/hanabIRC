@@ -254,7 +254,7 @@ class Game(object):
         if i is None:
             retVal.private[nick].append('You tried to discard card %s, oops.' % X)
             retVal.private[nick].append('Card must be one of %s' %
-                        ', '.join(sorted([c.mark for x in self._players[nick].hand])))
+                        ', '.join(sorted([c.mark for c in self._players[nick].hand])))
             return retVal
             
         c = self._players[nick].hand.pop(i)
