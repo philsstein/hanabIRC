@@ -209,7 +209,7 @@ class Hanabot(SingleServerIRCBot):
             # to user is always a notice.
             for nick, lines in response.private.iteritems():
                 for line in lines:
-                        self.connection.notice(nick, line)
+                    self.connection.notice(nick, line)
 
     # some sugar for sending msgs
     def _to_chan(self, event, msgs):
