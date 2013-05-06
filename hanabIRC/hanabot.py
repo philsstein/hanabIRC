@@ -195,17 +195,21 @@ class Hanabot(SingleServerIRCBot):
                 self._to_chan(event, err)
 
     # some sugar for sending msgs
-    def _display(self, response, event):
+    def _display(self, response, event, notice=False):
         '''response is a GameResponse instance. event is an irclib event, which gives us nick and channel.'''
         if not response:
             log.error('Got False response, not displaying output.')
         else:
             for line in response.public:
-                self.connection.notice(event.target, line)
-            
+                if notice:
+                    self.connection.notice(event.target, line)
+                else:
+                    self.connection.privmsg(event.target, line)
+
+            # to user is always a notice.
             for nick, lines in response.private.iteritems():
                 for line in lines:
-                    self.connection.notice(nick, line)
+                        self.connection.notice(nick, line)
 
     # some sugar for sending msgs
     def _to_chan(self, event, msgs):
@@ -398,7 +402,8 @@ class Hanabot(SingleServerIRCBot):
         
         log.info('Starting new game.')
         self.games[event.target] = Game()
-        self._display(GameResponse('New game started by %s. Accepting joins.' % nick), event)
+        self._display(GameResponse('New game started by %s. Accepting joins.' % nick),
+                      event, notice=True)
 
         if self.notify_channel:
             m = irc_markup()

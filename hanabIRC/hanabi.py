@@ -471,7 +471,9 @@ class Game(object):
     def _get_discards_string(self):
         # display like: R123, W234, B45
         cards = list()
-        for color, numbers in self.discards.iteritems():
+        # this is not efficent at all.
+        for color in sorted(self.discards.keys()):   
+            numbers = self.discards[color]
             cards.append(irc_markup().color(
                 color[0].upper() + ''.join(str(x) for x in numbers), color))
 
@@ -480,7 +482,9 @@ class Game(object):
     def get_table(self):
         ret = gr()
         table = list()
-        for color, cards in self.table.iteritems():
+        # sorting by color each time is horrible. 
+        for color in sorted(self.table.keys()):
+            cards = self.table[color]
             nums = ''.join(sorted([str(c.number) for c in cards]))
             if nums:
                 table.append(irc_markup().color(color.upper()[0] + nums, color))
