@@ -3,7 +3,7 @@ from setuptools import find_packages
 
 setup(
     name='HanabIRC',
-    version='0.1.12',
+    version='0.1.13',
     packages=find_packages(exclude=['*test']),
     license='FreeBSD License', 
     author='Phil S. Stein', 
