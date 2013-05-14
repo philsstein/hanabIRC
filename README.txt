@@ -48,6 +48,7 @@ History
 * 2013-04-17 - Version 0.1.11 - Bug fix in !game and !games command.
 * 2013-04-18 - Version 0.1.12 - Bug fix. 
 * 2013-05-07 - Version 0.1.13 - Use /msg for table display soas to not disturb people in the channel, but not playing. Sort table and discard piles in the same way.
+* 2013-05-14 - Version 0.1.14 - Fix fencepost error when computing end of game due to end of deck.
 
 
 TODO:

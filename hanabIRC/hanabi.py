@@ -628,7 +628,8 @@ class Game(object):
 
     def _is_game_over(self):
         '''Return True if an end game condition is true.'''
-        if self.last_round is not None and self.last_round == len(self._players):
+        # -1 for last round as we skip the first player when computing last_round.
+        if self.last_round is not None and self.last_round == len(self._players)-1:
             return True
         elif self._rainbow_game and 30 == sum([len(cs) for cs in self.table.values()]):
             return True
