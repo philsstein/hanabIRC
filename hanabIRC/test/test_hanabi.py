@@ -47,7 +47,7 @@ class test_hanabi(unittest2.TestCase):
     def test_lastround(self):
         self.setUpGame()
         self.game.deck = []
-        for i in xrange(len(players)):
+        for i in xrange(len(players)-1):
             self.assertFalse(self.game.game_over())
             self.game.discard_card(self.game.player_turn(), 'A')
 
