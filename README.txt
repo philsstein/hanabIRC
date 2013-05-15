@@ -49,6 +49,7 @@ History
 * 2013-04-18 - Version 0.1.12 - Bug fix. 
 * 2013-05-07 - Version 0.1.13 - Use /msg for table display soas to not disturb people in the channel, but not playing. Sort table and discard piles in the same way.
 * 2013-05-14 - Version 0.1.14 - Fix fencepost error when computing end of game due to end of deck.
+* 2013-05-15 - Version 0.1.15 - Show hands of all players at end of game.
 
 
 TODO:
@@ -60,3 +61,4 @@ TODO:
 - add !replace command to replace people in-game
 - add actual rules text
 - make sure when a player leaves, they do not still get PMs.
+- remove redundant need to specify player name in !hint command.

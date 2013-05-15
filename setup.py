@@ -1,9 +1,10 @@
 from distutils.core import setup
 from setuptools import find_packages
+from hanabIRC import __version__
 
 setup(
     name='HanabIRC',
-    version='0.1.14',
+    version=__version__,
     packages=find_packages(exclude=['*test']),
     license='FreeBSD License', 
     author='Phil S. Stein', 

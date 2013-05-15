@@ -23,6 +23,7 @@ from text_markup import irc_markup
 from GameResponse import GameResponse
 from irc.bot import SingleServerIRCBot
 from irc.client import VERSION as irc_client_version
+from hanabIRC import __version__
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class Hanabot(SingleServerIRCBot):
             'Hand Management': ['move', 'swap', 'sort'],
             'Game Action': ['play', 'hint', 'discard'],
             'Information': ['help', 'rules', 'turn', 'turns', 'game',
-                            'games', 'hands', 'table', 'discardpile']
+                            'games', 'hands', 'table', 'discardpile', 'version']
         }
         
         self.commands = list()
@@ -65,7 +66,7 @@ class Hanabot(SingleServerIRCBot):
 
         # these commands can execute without an active game.
         # otherwise the command handlers can assume an active game.
-        self.no_game_commands = ['new', 'help', 'rules', 'game', 'games', 'part']
+        self.no_game_commands = ['new', 'help', 'rules', 'game', 'games', 'part', 'version']
 
         # games is a dict indexed by channel name, value is the Game object.
         self.games = dict()
@@ -252,6 +253,10 @@ class Hanabot(SingleServerIRCBot):
                 'The game continues until the deck is empty, all the cards '
                 'are correcly displayed on the table, or the three storm '
                 'tokens have been flipped.')
+            usage.append('To start a new game in a different channel, use !new '
+                         'chan_name. The bot will join that channel and you can start '
+                         'a new game.')
+            usage.append('!games shows status of all games in all channels.')
             usage.append('The bot supports rainbow cards. !help start for details.')
             for text, cmds in self.command_dict.iteritems():
                 usage.append('%s commands: %s' % (text, ', '.join(cmds)))
@@ -308,6 +313,9 @@ class Hanabot(SingleServerIRCBot):
 
         ret.public.append(s)
         return ret
+    
+    def handle_version(self, args, event):
+        self._to_chan(event, 'version: %s' % __version__)
 
     def handle_game(self, args, event):
         log.debug('got game event. args: %s', args)
@@ -554,11 +562,12 @@ class Hanabot(SingleServerIRCBot):
         'turn': '!turn - show which players turn it is.', 
         'turns': '!turns - show turn order in current play ordering.',
         'game': '!game - show the game state for current channel.', 
-        'games': '!game - show game states for all channels hanabot has joined.',
+        'games': '!games - show game states for all channels hanabot has joined.',
         'hands': '!hands - show hands of players. Your own hand will be shown with the "backs" facing you, identified individually by a letter. When a card is removed the letter is reused for the new card.',
         'table': '!game - show the state of the table', 
         'discardpile': '!discardpile - show the current discard pile.',
         'grue': 'You are likely to be eaten.',
+        'version': 'Show the version of the bot.',
     }
 
 if __name__ == "__main__":

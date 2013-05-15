@@ -668,6 +668,10 @@ class Game(object):
         else:
             pub.append('Hmm. score should only be in range 0 to 25 (or 30 w/rainbow cards). Somthing is amiss. Might as well play again...')
 
+        pub.append('Final hands are:')
+        for player in self._players.values():
+            pub.append(player.get_hand())
+        
         pub += ['-------------------------']
         return gr(pub)
 
