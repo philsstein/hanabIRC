@@ -260,8 +260,9 @@ class Game(object):
         c = self._players[nick].hand.pop(i)
         if len(self.deck):
             self._players[nick].add_card(self.deck.pop(0))
-        else:
-            self.last_round = self.last_round + 1 if self.last_round is not None else 1
+       
+        if 0 == len(self.deck):
+            self.last_round = self.last_round + 1 if self.last_round is not None else 0
 
         retVal.public.append('%s has discarded %s' % (nick, str(c)))
         self.discards[c.color].append(c.number)
@@ -314,8 +315,9 @@ class Game(object):
         if len(self.deck):
             self._players[nick].add_card(self.deck.pop(0))
             retVal.public.append('%s drew a new card from the deck into his or her hand.' % nick)
-        else:
-            self.last_round = self.last_round + 1 if self.last_round is not None else 1
+
+        if 0 == len(self.deck):
+            self.last_round = self.last_round + 1 if self.last_round is not None else 0
 
         self.turn_order.append(self.turn_order.pop(0))
         retVal.merge(self.get_table())
@@ -410,6 +412,9 @@ class Game(object):
 
         # tell the next player it is their turn.
         retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
+
+        if 0 == len(self.deck):
+            self.last_round = self.last_round + 1 if self.last_round is not None else 0
 
         return retVal
 
@@ -628,8 +633,7 @@ class Game(object):
 
     def _is_game_over(self):
         '''Return True if an end game condition is true.'''
-        # -1 for last round as we skip the first player when computing last_round.
-        if self.last_round is not None and self.last_round == len(self._players)-1:
+        if self.last_round is not None and self.last_round == len(self._players):
             return True
         elif self._rainbow_game and 30 == sum([len(cs) for cs in self.table.values()]):
             return True
