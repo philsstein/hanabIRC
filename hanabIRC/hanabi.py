@@ -369,18 +369,23 @@ class Game(object):
 
         if isinstance(hint, str):
             hint = hint.lower()
-            if not hint in Game.colors or (
-                    len(hint) == 1 and not hint in [c[0] for c in Game.colors]):
+
+            # convert partial hint into full color string.
+            for c in Game.colors:
+                if c.startswith(hint):
+                    hint = c
+
+            log.debug('Found color %s from hint', hint)
+
+            if not hint in Game.colors: 
                 retVal.public.append('Invalid hint given by %s, still their turn.' % nick)
                 retVal.private[nick].append('%s is not a valid color. Valid colors are %s.' %
                         (hint, ', '.join(Game.colors)))
                 return retVal
 
-            # convert "?" into full color string.
-            if len(hint) == 1:
-                hint = [c for c in Game.colors if c[0] == hint][0]
 
         elif isinstance(hint, int) and not 0 < hint < 6:
+            retVal.public.append('Invalid hint given by %s, still their turn.' % nick)
             retVal.private[nick].append('numbers must be between 1 and 5 inclusive.')
             return retVal
 
@@ -453,11 +458,11 @@ class Game(object):
     def get_hands(self, nick):
         retVal = gr()
         hands = []
-        for p in self._players.values():
-            if p.name != nick:
-                hands.append(p.get_hand())
+        for p in sorted(self._players.keys()):
+            if self._players[p].name != nick:
+                hands.append(self._players[p].get_hand())
             else:
-                hands.append(p.get_hand(hidden=True))
+                hands.append(self._players[p].get_hand(hidden=True))
         
         # Now let's all join hands...
         retVal.private[nick].append('Current hands: %s' % ', '.join(hands))
