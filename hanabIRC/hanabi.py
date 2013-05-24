@@ -394,17 +394,16 @@ class Game(object):
         cards = self._get_cards(player, hint)
 
         if not len(cards):
-            retVal.public.append('Looks like %s is as deceiving as a low down dirty '
-                       '... deceiver. They gave a hint that does not '
-                       'match anything in %s\'s hand!' % (nick, player))
-            return retVal
+            retVal.public.append('======== %s has given %s a hint: you have no %s cards' % (
+                       (nick, player, str(hint))))
+        else:
+            plural = 's ' if len(cards) > 1 else ' '
+            is_are = 'are ' if len(cards) > 1 else 'is '
+            a = 'a ' if isinstance(hint, int) else ''
+            retVal.public.append('======== %s has given %s a hint: your card%s%s %s%s%s' % (
+                       (nick, player, plural, ', '.join([c.mark for c in cards]), is_are, 
+                        a, str(hint))))
 
-        plural = 's ' if len(cards) > 1 else ' '
-        is_are = 'are ' if len(cards) > 1 else 'is '
-        a = 'a ' if isinstance(hint, int) else ''
-        retVal.public.append('======== %s has given %s a hint: your card%s%s %s%s%s' % (
-                   (nick, player, plural, ', '.join([c.mark for c in cards]), is_are, 
-                    a, str(hint))))
         self.turn_order.append(self.turn_order.pop(0))
         self._flip(self.notes, self.notes_up, self.notes_down)
 

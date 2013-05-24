@@ -32,6 +32,7 @@ You may want to save the log file and run it in the background:
 History
 =======
 
+* 2013-05-24 - Version 0.1.17 - Allow "invalid" hints to be given and count them as a real hint.
 * 2013-05-22 - Version 0.1.16 - Fix (again) fencepost error of last turns at game end. Count hint as a turn in last turns.
 * 2013-05-15 - Version 0.1.15 - Show hands of all players at end of game.
 * 2013-05-14 - Version 0.1.14 - Fix fencepost error when computing end of game due to end of deck.
