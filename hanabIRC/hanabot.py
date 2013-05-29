@@ -341,6 +341,10 @@ class Hanabot(SingleServerIRCBot):
 
         nick = event.source.nick
         self._display(self.games[event.target].stop_game(nick), event)
+        log.debug('game size: %s' % len(self.games))
+        log.debug('deleting game: %s' % event.target)
+        del self.games[event.target]
+        log.debug('game size: %s' % len(self.games))
 
     def handle_turn(self, args, event):
         if not self._check_args(args, 0, [], event, 'turn'):

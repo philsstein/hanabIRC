@@ -166,13 +166,13 @@ class Game(object):
         TODO: doctest sample here.
     '''
     # "static" class variables.
-    colors = ['red', 'white', 'blue', 'green', 'yellow'] 
     card_distribution = [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]
 
     def __init__(self):
         '''
             Later may take variants as args so something.
         '''
+        self.colors = ['red', 'white', 'blue', 'green', 'yellow'] 
         self._players = defaultdict(str)
         # turn_order[0] is always current player's name
         self.turn_order = []
@@ -184,7 +184,7 @@ class Game(object):
         self.storms = [self.storms_down for i in range(3)]
         
         # The deck is Cards with color and count distributions shown, shuffled.
-        self.deck = [Card(c, n) for c in Game.colors
+        self.deck = [Card(c, n) for c in self.colors
                      for n in self.card_distribution]
         random.shuffle(self.deck)
 
@@ -359,7 +359,7 @@ class Game(object):
                 retVal.private[nick].append('The hint command must be a string (color) or '
                             'an integer (card number). Valid colors are %s '
                             ' or the first charecter  of the word (all case '
-                            'insensitive.' % ', '.join(Game.colors))
+                            'insensitive.' % ', '.join(self.colors))
                 return retVal
 
         if not player in self._players.keys():
@@ -370,16 +370,16 @@ class Game(object):
             hint = hint.lower()
 
             # convert partial hint into full color string.
-            for c in Game.colors:
+            for c in self.colors:
                 if c.startswith(hint):
                     hint = c
 
             log.debug('Found color %s from hint', hint)
 
-            if not hint in Game.colors: 
+            if not hint in self.colors: 
                 retVal.public.append('Invalid hint given by %s, still their turn.' % nick)
                 retVal.private[nick].append('%s is not a valid color. Valid colors are %s.' %
-                        (hint, ', '.join(Game.colors)))
+                        (hint, ', '.join(self.colors)))
                 return retVal
 
 
@@ -482,7 +482,7 @@ class Game(object):
         # this is not efficent at all.
         for color in sorted(self.discards.keys()):   
             numbers = self.discards[color]
-            if color == 'rainbow':
+            if color == 'RNBW':
                 cards.append(irc_markup().color(
                     color + ''.join(str(x) for x in numbers), color))
             else:
@@ -499,7 +499,7 @@ class Game(object):
             cards = self.table[color]
             nums = ''.join(sorted([str(c.number) for c in cards]))
             if nums:
-                if color == 'rainbow':
+                if color == 'RNBW':
                     table.append(irc_markup().color(color + nums, color))
                 else:
                     table.append(irc_markup().color(color.upper()[0] + nums, color))
@@ -588,12 +588,20 @@ class Game(object):
             retVal.private[nick].append('The game has already begun.')
             return retVal
 
+        if len(self._players) > 1:
+            self._playing = True
+            retVal.public.append('The Hanabi game has started!')
+            self.turn_order = random.sample(self._players.keys(), len(self._players))
+        else:
+            retVal.public.append('There are not enough players in the game, not starting.')
+            return retVal
+       
         if opts:
             for opt, val in opts.iteritems():
                 # only one valid option for now.
                 if opt.startswith('rainbow'):
                     self._rainbow_game = True
-                    Game.colors.append('rainbow')
+                    self.colors.append('rainbow')
                     if opt.endswith('5'):
                         retVal.public.append('Adding 5 rainbow cards to the deck')
                         self.deck += [Card('rainbow', i) for i in xrange(1,6)]
@@ -607,14 +615,6 @@ class Game(object):
                     retVal.public.append('Game not started.')
                     return retVal
 
-        if len(self._players) > 1:
-            self._playing = True
-            retVal.public.append('The Hanabi game has started!')
-            self.turn_order = random.sample(self._players.keys(), len(self._players))
-        else:
-            retVal.public.append('There are not enough players in the game, not starting.')
-            return retVal
-       
         card_count = 5 if len(self._players) < 4 else 4
         for player in self._players.values():
             for c in self.deck[:card_count]:

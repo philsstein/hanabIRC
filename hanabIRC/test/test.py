@@ -33,7 +33,7 @@ def show_game(num_players, win=True):
     g.start_game(p1)
 
     while not g._is_game_over():
-        for c in Game.colors:
+        for c in ['red', 'white', 'blue', 'green', 'yellow']:
             for i in xrange(1, 6):
                 # get current player
                 p = g.turn_order[0]
