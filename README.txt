@@ -32,6 +32,7 @@ You may want to save the log file and run it in the background:
 History
 =======
 
+* 2013-05-27 - Version 0.1.22 - Only people in the game can !stop it. 
 * 2013-05-27 - Version 0.1.21 - More rainbow updates. Delete a game at !stop.
 * 2013-05-27 - Version 0.1.20 - Rainbow updates. Display chan name in !games. Correctly delete a game when it's over. 
 * 2013-05-27 - Version 0.1.19 - Bug fix for rainbow game.
