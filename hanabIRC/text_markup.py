@@ -17,8 +17,9 @@ class text_markup_base(object):
     BLUE = 'blue'
     GREEN = 'green'
     YELLOW = 'yellow'
+    RAINBOW = 'rainbow'    # special hanabi color, hacky.
 
-    Colors = [RED, WHITE, BLUE, GREEN, YELLOW]
+    Colors = [RED, WHITE, BLUE, GREEN, YELLOW, RAINBOW]
 
     # supported markup
     BOLD = 'bold'
@@ -90,7 +91,8 @@ class irc_markup(text_markup_base):
         text_markup_base.BLUE: 2,
         text_markup_base.GREEN: 3,
         text_markup_base.RED: 4,
-        text_markup_base.YELLOW: 8
+        text_markup_base.YELLOW: 8,
+        text_markup_base.RAINBOW: 0
     }
 
     def __init__(self):
@@ -116,7 +118,8 @@ class xterm_markup(text_markup_base):
         text_markup_base.BLUE: 34,
         text_markup_base.GREEN: 32,
         text_markup_base.RED: 31,
-        text_markup_base.YELLOW: 33
+        text_markup_base.YELLOW: 33,
+        text_markup_base.RAINBOW: 37
     }
 
     def __init__(self):
@@ -157,7 +160,8 @@ class ascii_markup(text_markup_base):
         text_markup_base.BLUE: 'B',
         text_markup_base.GREEN: 'G',
         text_markup_base.RED: 'R',
-        text_markup_base.YELLOW: 'Y'
+        text_markup_base.YELLOW: 'Y',
+        text_markup_base.RAINBOW: 'RNBW'
     }
 
     def __init__(self):

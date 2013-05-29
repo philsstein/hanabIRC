@@ -48,10 +48,7 @@ class Card(object):
 
     def front(self):
         # special case rainbow.
-        if self.color == 'rainbow':
-            return '%s%d' % ('RNBW', self.number)
-        else:
-            return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color)
+        return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color)
 
     def back(self):
         return '%s' % self.mark

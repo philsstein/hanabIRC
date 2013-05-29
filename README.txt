@@ -32,6 +32,7 @@ You may want to save the log file and run it in the background:
 History
 =======
 
+* 2013-05-27 - Version 0.1.19 - Bug fix for rainbow game.
 * 2013-05-24 - Version 0.1.18 - Fix partial colors given as clues handling. Order hands alphabetically. 
 * 2013-05-24 - Version 0.1.17 - Allow "invalid" hints to be given and count them as a real hint.
 * 2013-05-22 - Version 0.1.16 - Fix (again) fencepost error of last turns at game end. Count hint as a turn in last turns.
@@ -64,3 +65,4 @@ TODO:
 - add actual rules text
 - make sure when a player leaves, they do not still get PMs.
 - remove redundant need to specify player name in !hint command in two player games.
+- remove rainbow after added and game ends.
