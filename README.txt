@@ -32,6 +32,7 @@ You may want to save the log file and run it in the background:
 History
 =======
 
+* 2013-05-27 - Version 0.1.20 - Rainbow updates. Display chan name in !games. Correctly delete a game when it's over. 
 * 2013-05-27 - Version 0.1.19 - Bug fix for rainbow game.
 * 2013-05-24 - Version 0.1.18 - Fix partial colors given as clues handling. Order hands alphabetically. 
 * 2013-05-24 - Version 0.1.17 - Allow "invalid" hints to be given and count them as a real hint.
