@@ -47,8 +47,10 @@ class Card(object):
         self.markup = Card.markup
 
     def front(self):
-        # special case rainbow.
-        return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color)
+        if self.color == 'rainbow':
+            return self.markup.color('%s%d' % ('RNBW', self.number), self.color)
+        else:
+            return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color)
 
     def back(self):
         return '%s' % self.mark
@@ -480,8 +482,12 @@ class Game(object):
         # this is not efficent at all.
         for color in sorted(self.discards.keys()):   
             numbers = self.discards[color]
-            cards.append(irc_markup().color(
-                color[0].upper() + ''.join(str(x) for x in numbers), color))
+            if color == 'rainbow':
+                cards.append(irc_markup().color(
+                    color + ''.join(str(x) for x in numbers), color))
+            else:
+                cards.append(irc_markup().color(
+                    color[0].upper() + ''.join(str(x) for x in numbers), color))
 
         return 'Discards: %s' % ', '.join(cards)
 
@@ -493,7 +499,10 @@ class Game(object):
             cards = self.table[color]
             nums = ''.join(sorted([str(c.number) for c in cards]))
             if nums:
-                table.append(irc_markup().color(color.upper()[0] + nums, color))
+                if color == 'rainbow':
+                    table.append(irc_markup().color(color + nums, color))
+                else:
+                    table.append(irc_markup().color(color.upper()[0] + nums, color))
 
         if not table:
             ret.public.append('Table: empty')
@@ -590,8 +599,7 @@ class Game(object):
                         self.deck += [Card('rainbow', i) for i in xrange(1,6)]
                     else:
                         retVal.public.append('Adding 10 rainbow cards to the deck')
-                        self.deck += [Card('rainbow', i) for i in xrange(1,6)]
-                        self.deck += [Card('rainbow', i) for i in xrange(1,6)]
+                        self.deck += [Card('rainbow', i) for i in self.card_distribution]
 
                     random.shuffle(self.deck)
                 else:

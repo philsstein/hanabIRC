@@ -278,6 +278,8 @@ class Hanabot(SingleServerIRCBot):
         # now tell the engine about the !hint
         nick = event.source.nick
         self._display(self.games[event.target].hint_player(nick, player=args[0], hint=args[1]), event)
+        if self.games[event.target].game_over():
+            del self.games[event.target]
 
     def handle_rules(self, args, event):
         log.debug('got rules event. args: %s', args)
@@ -308,8 +310,8 @@ class Hanabot(SingleServerIRCBot):
                      'joined yet.' % channel)
         else:
             turn = game.turn().public[0]
-            s = ('Game is active and being played by players %s. %s' %
-                 (', '.join(game.players()), turn))
+            s = ('Game is active in %s and being played by players %s. %s' %
+                 (channel, ', '.join(game.players()), turn))
 
         ret.public.append(s)
         return ret
@@ -367,6 +369,8 @@ class Hanabot(SingleServerIRCBot):
         # discard the card and show the repsonse
         nick = event.source.nick
         self._display(self.games[event.target].discard_card(nick, args[0]), event)
+        if self.games[event.target].game_over():
+            del self.games[event.target]
 
     def handle_play(self, args, event):
         log.debug('got play event. args: %s', args)
@@ -376,6 +380,8 @@ class Hanabot(SingleServerIRCBot):
 
         nick = event.source.nick
         self._display(self.games[event.target].play_card(nick, args[0]), event)
+        if self.games[event.target].game_over():
+            del self.games[event.target]
 
     def handle_hands(self, args, event):
         ''' Show hands of current game.  '''

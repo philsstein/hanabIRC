@@ -14,9 +14,9 @@ from text_markup import xterm_markup
 # tell the cards to color for xterm
 Card.markup = xterm_markup()
 
-colors = ['red', 'white', 'blue', 'green', 'yellow'] 
+colors = ['red', 'white', 'blue', 'green', 'yellow', 'rainbow'] 
 card_distribution = [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]
-deck = [Card(c, n) for c in Game.colors for n in card_distribution]
+deck = [Card(c, n) for c in colors for n in card_distribution]
 random.shuffle(deck)
 
 # test sort

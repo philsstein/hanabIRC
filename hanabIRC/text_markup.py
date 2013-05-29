@@ -106,7 +106,14 @@ class irc_markup(text_markup_base):
 
     def color(self, text, color):
         text_markup_base.color(self, text, color)
-        return '\x03%02d%s\x03' % (irc_markup._colormap[color], text)
+        if color == text_markup_base.RAINBOW:
+            retVal = ''
+            for i, c in enumerate(text):
+                retVal += self.color(c, text_markup_base.Colors[i % (len(text_markup_base.Colors)-1)])
+
+            return retVal
+        else:
+            return '\x03%02d%s\x03' % (irc_markup._colormap[color], text)
 
 
 class xterm_markup(text_markup_base):
@@ -132,7 +139,14 @@ class xterm_markup(text_markup_base):
 
     def color(self, text, color):
         text_markup_base.color(self, text, color)
-        return '\033[%d;1m%s\033[0m' % (xterm_markup._colormap[color], text)
+        if color == text_markup_base.RAINBOW:
+            retVal = ''
+            for i, c in enumerate(text):
+                retVal += self.color(c, text_markup_base.Colors[i % (len(text_markup_base.Colors)-1)])
+
+            return retVal
+        else:
+            return '\033[%d;1m%s\033[0m' % (xterm_markup._colormap[color], text)
 
 
 class ascii_markup(text_markup_base):

@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.join(sys.path[0], '..'))
 import unittest2
 from string import uppercase
 from hanabi import Game, Player, Card
+from text_markup import xterm_markup
 
 players = ['p1', 'p2']
 
@@ -56,6 +57,13 @@ class test_hanabi(unittest2.TestCase):
             self.game.discard_card(self.game.player_turn(), 'A')
 
         self.assertTrue(self.game.game_over())
+
+    def test_rainbow_display(self):
+        p = Player(players[0])
+        p.hand = [Card('rainbow', i, b) for i, b in zip(xrange(1,6), uppercase[:5])]
+        m = xterm_markup()
+        print m.color('hello world', xterm_markup.RAINBOW)
+
 
 if __name__ == '__main__':
     unittest2.main()
