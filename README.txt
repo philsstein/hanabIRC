@@ -31,6 +31,8 @@ You may want to save the log file and run it in the background:
 History
 =======
 
+* 2013-05-28 - Version 0.1.24 - Show turns remaining on table once deck is empty.
+* 2013-05-28 - Version 0.1.23 - Make rainbow card display consistant: "RNBW".
 * 2013-05-27 - Version 0.1.22 - Only people in the game can !stop it. 
 * 2013-05-27 - Version 0.1.21 - More rainbow updates. Delete a game at !stop.
 * 2013-05-27 - Version 0.1.20 - Rainbow updates. Display chan name in !games. Correctly delete a game when it's over. 

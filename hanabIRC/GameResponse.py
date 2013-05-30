@@ -59,12 +59,17 @@ class GameResponse(object):
             self.private[name] += gr.private[name]
 
     def __str__(self):
-        r = 'value: %s' % self._retVal
+        r = 'value: %s\n' % self._retVal
         if self._public:
-            r += ' public: %s' % ', '.join(self._public)
+            if isinstance(self._public, (str, unicode)):
+                r += ' public: %s\n' % ', '.join(self._public)
+            else:
+                for l in self._public:
+                    r += ' public: %s\n' % l
+
 
         for p, ms in self._private.iteritems():
-            r += ' %s: %s' % (p, ', '.join(ms))
+            r += ' %s: %s\n' % (p, ', '.join(ms))
 
         return r
 

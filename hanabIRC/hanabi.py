@@ -263,9 +263,6 @@ class Game(object):
         if len(self.deck):
             self._players[nick].add_card(self.deck.pop(0))
        
-        if 0 == len(self.deck):
-            self.last_round = self.last_round + 1 if self.last_round is not None else 0
-
         retVal.public.append('%s has discarded %s' % (nick, str(c)))
         self.discards[c.color].append(c.number)
         self.discards[c.color].sort()
@@ -273,6 +270,11 @@ class Game(object):
         self.turn_order.append(self.turn_order.pop(0))
 
         retVal.merge(self.get_table())
+
+        if 0 == len(self.deck):
+            self.last_round = self.last_round + 1 if self.last_round is not None else 0
+            retVal.public.append('Turns remaining in game: %d' % (
+                len(self._players)-self.last_round))
 
         # tell the next player it is their turn.
         retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
@@ -318,11 +320,13 @@ class Game(object):
             self._players[nick].add_card(self.deck.pop(0))
             retVal.public.append('%s drew a new card from the deck into his or her hand.' % nick)
 
-        if 0 == len(self.deck):
-            self.last_round = self.last_round + 1 if self.last_round is not None else 0
-
         self.turn_order.append(self.turn_order.pop(0))
         retVal.merge(self.get_table())
+
+        if 0 == len(self.deck):
+            self.last_round = self.last_round + 1 if self.last_round is not None else 0
+            retVal.public.append('Turns remaining in game: %d' % (
+                len(self._players)-self.last_round))
 
         # tell the next player it is their turn.
         retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
@@ -421,6 +425,8 @@ class Game(object):
 
         if 0 == len(self.deck):
             self.last_round = self.last_round + 1 if self.last_round is not None else 0
+            retVal.public.append('Turns remaining in game: %d' % (
+                len(self._players)-self.last_round))
 
         return retVal
 

@@ -15,8 +15,12 @@ class test_hanabi(unittest2.TestCase):
 
     def setUpGame(self):
         self.game = Game()
+        self.game.markup = xterm_markup()
         for p in players:
             self.game.add_player(p)
+
+        for c in self.game.deck:
+            c.markup = xterm_markup()
 
         self.game.start_game(players[0])
         self.game.turn_order = list(players)
@@ -54,7 +58,7 @@ class test_hanabi(unittest2.TestCase):
         self.game.discard_card(self.game.player_turn(), 'A')
         for i in xrange(len(players)):
             self.assertFalse(self.game.game_over())
-            self.game.discard_card(self.game.player_turn(), 'A')
+            print self.game.discard_card(self.game.player_turn(), 'A')
 
         self.assertTrue(self.game.game_over())
 
