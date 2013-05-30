@@ -48,7 +48,7 @@ class Card(object):
 
     def front(self):
         if self.color == 'rainbow':
-            return self.markup.color('%s%d' % ('RNBW', self.number), self.color)
+            return self.markup.color('%s%d' % ('RBNW', self.number), self.color)
         else:
             return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color)
 
@@ -183,6 +183,8 @@ class Game(object):
         self.storms_up, self.storms_down = ('X', 'O')
         self.storms = [self.storms_down for i in range(3)]
         
+        self.markup = irc_markup()
+
         # The deck is Cards with color and count distributions shown, shuffled.
         self.deck = [Card(c, n) for c in self.colors
                      for n in self.card_distribution]
@@ -201,6 +203,7 @@ class Game(object):
         # last_round set to 0 when deck is empty and incremented each turn
         # when last_round == num players, the game is over.
         self.last_round = None
+
 
     def in_game(self, nick):
         '''Return True is nick is in the game, False otherwise.'''
@@ -482,11 +485,11 @@ class Game(object):
         # this is not efficent at all.
         for color in sorted(self.discards.keys()):   
             numbers = self.discards[color]
-            if color == 'RNBW':
-                cards.append(irc_markup().color(
-                    color + ''.join(str(x) for x in numbers), color))
+            if color == 'rainbow':
+                cards.append(self.markup.color(
+                    'RNBW' + ''.join(str(x) for x in numbers), color))
             else:
-                cards.append(irc_markup().color(
+                cards.append(self.markup.color(
                     color[0].upper() + ''.join(str(x) for x in numbers), color))
 
         return 'Discards: %s' % ', '.join(cards)
@@ -499,10 +502,10 @@ class Game(object):
             cards = self.table[color]
             nums = ''.join(sorted([str(c.number) for c in cards]))
             if nums:
-                if color == 'RNBW':
-                    table.append(irc_markup().color(color + nums, color))
+                if color == 'rainbow':
+                    table.append(self.markup.color('RNBW' + nums, color))
                 else:
-                    table.append(irc_markup().color(color.upper()[0] + nums, color))
+                    table.append(self.markup.color(color.upper()[0] + nums, color))
 
         if not table:
             ret.public.append('Table: empty')
