@@ -37,6 +37,9 @@ class test_hanabi(unittest2.TestCase):
     def test_handmgt(self):
         p = Player(players[0])
         p.hand = [Card('red', i, b) for i, b in zip(xrange(1,6), uppercase[:5])]
+        for c in p.hand:
+            c.markup = xterm_markup()
+
         self.assertEqual('ABCDE', self.getBacks(p.hand))
 
         print p.swap_cards('A', 'E')
@@ -55,6 +58,9 @@ class test_hanabi(unittest2.TestCase):
         # more turn.
         self.setUpGame()
         self.game.deck = [Card('red', 1, 'A')]
+        for c in self.game.deck:
+            c.markup = xterm_markup()
+
         self.game.discard_card(self.game.player_turn(), 'A')
         for i in xrange(len(players)):
             self.assertFalse(self.game.game_over())
@@ -74,7 +80,7 @@ class test_hanabi(unittest2.TestCase):
             self.game.add_player(p)
 
         for c in self.game.deck:
-            c.markup = self.game.markup
+            c.markup = xterm_markup()
 
         self.game.start_game(players[0], opts={'rainbow_10': True})
         self.game.turn_order = list(players)

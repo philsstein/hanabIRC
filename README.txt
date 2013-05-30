@@ -31,6 +31,7 @@ You may want to save the log file and run it in the background:
 History
 =======
 
+* 2013-05-28 - Version 0.1.25 - Do not show turn or hands privately on last turn. 
 * 2013-05-28 - Version 0.1.24 - Show turns remaining on table once deck is empty.
 * 2013-05-28 - Version 0.1.23 - Make rainbow card display consistant: "RNBW".
 * 2013-05-27 - Version 0.1.22 - Only people in the game can !stop it. 

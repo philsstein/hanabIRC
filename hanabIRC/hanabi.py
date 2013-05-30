@@ -269,18 +269,20 @@ class Game(object):
         self._flip(self.notes, self.notes_down, self.notes_up)
         self.turn_order.append(self.turn_order.pop(0))
 
+        if 0 == len(self.deck):
+            self.last_round = self.last_round + 1 if self.last_round is not None else 0
+
         retVal.merge(self.get_table())
 
         if 0 == len(self.deck):
-            self.last_round = self.last_round + 1 if self.last_round is not None else 0
             retVal.public.append('Turns remaining in game: %d' % (
                 len(self._players)-self.last_round))
 
-        # tell the next player it is their turn.
-        retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
-
         if self._is_game_over():
             retVal.merge(self._end_game())
+        else:
+            # tell the next player it is their turn.
+            retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
 
         return retVal
 
@@ -321,18 +323,21 @@ class Game(object):
             retVal.public.append('%s drew a new card from the deck into his or her hand.' % nick)
 
         self.turn_order.append(self.turn_order.pop(0))
-        retVal.merge(self.get_table())
 
         if 0 == len(self.deck):
             self.last_round = self.last_round + 1 if self.last_round is not None else 0
+
+        retVal.merge(self.get_table())
+
+        if 0 == len(self.deck):
             retVal.public.append('Turns remaining in game: %d' % (
                 len(self._players)-self.last_round))
 
-        # tell the next player it is their turn.
-        retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
-
         if self._is_game_over():
             retVal.merge(self._end_game())
+        else:
+            # tell the next player it is their turn.
+            retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
 
         return retVal
 
@@ -418,15 +423,21 @@ class Game(object):
         self.turn_order.append(self.turn_order.pop(0))
         self._flip(self.notes, self.notes_up, self.notes_down)
 
-        retVal.merge(self.get_table())
-
-        # tell the next player it is their turn.
-        retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
-
         if 0 == len(self.deck):
             self.last_round = self.last_round + 1 if self.last_round is not None else 0
+
+        retVal.merge(self.get_table())
+
+        if 0 == len(self.deck):
             retVal.public.append('Turns remaining in game: %d' % (
                 len(self._players)-self.last_round))
+
+        if self._is_game_over():
+            retVal.merge(self._end_game())
+        else:
+            # tell the next player it is their turn.
+            retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
+
 
         return retVal
 
@@ -524,10 +535,11 @@ class Game(object):
         if len(self.discards.keys()):
             ret.public.append(self._get_discards_string())
 
-        ret.merge(self.turn())
+        if not self._is_game_over():
+            ret.merge(self.turn())
 
-        for p in self._players:
-            ret.merge(self.get_hands(p))
+            for p in self._players:
+                ret.merge(self.get_hands(p))
 
         return ret
 
