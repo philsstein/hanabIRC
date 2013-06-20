@@ -31,6 +31,8 @@ You may want to save the log file and run it in the background:
 History
 =======
 
+* 2013-06-20 - Version 0.2.1 - Underline "Table" line to make it stand out a bit more.
+* 2013-05-31 - Version 0.2.0 - Fix misspeling.
 * 2013-05-28 - Version 0.1.25 - Do not show turn or hands privately on last turn. 
 * 2013-05-28 - Version 0.1.24 - Show turns remaining on table once deck is empty.
 * 2013-05-28 - Version 0.1.23 - Make rainbow card display consistant: "RNBW".
@@ -70,4 +72,3 @@ TODO:
 - add actual rules text
 - make sure when a player leaves, they do not still get PMs.
 - remove redundant need to specify player name in !hint command in two player games.
-- remove rainbow after added and game ends.

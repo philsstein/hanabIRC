@@ -9,7 +9,8 @@ class text_markup_exception(Exception):
 
 
 class text_markup_base(object):
-    '''Abstract bolding and colorizing text. Base class does no markup.'''
+    '''Abstract bolding and colorizing text. Base class does no markup. This 
+    is way overengineered...'''
 
     # supported colors
     RED = 'red'
@@ -23,8 +24,9 @@ class text_markup_base(object):
 
     # supported markup
     BOLD = 'bold'
+    UNDERLINE = 'underline' 
 
-    Markups = [BOLD]
+    Markups = [BOLD, UNDERLINE]
 
     def __init__(self):
         pass
@@ -47,6 +49,8 @@ class text_markup_base(object):
     def bold(self, text):
         return self.markup(text, text_markup_base.BOLD)
 
+    def underline(self, text):
+        return self.markup(text, text_markup_base.UNDERLINE)
 
 class irc_markup(text_markup_base):
     '''
@@ -100,9 +104,12 @@ class irc_markup(text_markup_base):
 
     def markup(self, text, markup):
         text_markup_base.markup(self, text, markup)
-        # we only do bold for now. Replace with if esif chain when we
-        # support more.
-        return '\x02%s\x02' % text
+        if markup == text_markup_base.BOLD:
+            return '\x02%s\x02' % text
+        elif markup == text_markup_base.UNDERLINE:
+            return '\x15%s\x15' % text
+        else:
+            return text
 
     def color(self, text, color):
         text_markup_base.color(self, text, color)

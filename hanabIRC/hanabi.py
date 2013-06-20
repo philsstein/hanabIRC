@@ -48,7 +48,7 @@ class Card(object):
 
     def front(self):
         if self.color == 'rainbow':
-            return self.markup.color('%s%d' % ('RBNW', self.number), self.color)
+            return self.markup.color('%s%d' % ('RNBW', self.number), self.color)
         else:
             return self.markup.color('%s%d' % (self.color[0].upper(), self.number), self.color)
 
@@ -525,9 +525,9 @@ class Game(object):
                     table.append(self.markup.color(color.upper()[0] + nums, color))
 
         if not table:
-            ret.public.append('Table: empty')
+            ret.public.append(self.markup.underline('Table: empty'))
         else:
-            ret.public.append('Table: %s' % ', '.join(table))
+            ret.public.append(self.markup.underline('Table: %s' % ', '.join(table)))
 
         ret.public.append('Notes: %s, Storms: %s, %d cards remaining.' %
                          (''.join(sorted(self.notes)), ''.join(sorted(self.storms)), len(self.deck)))
