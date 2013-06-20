@@ -31,6 +31,7 @@ You may want to save the log file and run it in the background:
 History
 =======
 
+* 2013-06-21 - Version 0.2.2 - Fix underline control code - 0x1f instead of 0x15. Also use lighter blue and green to make a little more visible.
 * 2013-06-20 - Version 0.2.1 - Underline "Table" line to make it stand out a bit more.
 * 2013-05-31 - Version 0.2.0 - Fix misspeling.
 * 2013-05-28 - Version 0.1.25 - Do not show turn or hands privately on last turn. 

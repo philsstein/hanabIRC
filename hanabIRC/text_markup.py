@@ -92,8 +92,8 @@ class irc_markup(text_markup_base):
     # from mIRC color codes
     _colormap = {
         text_markup_base.WHITE: 0,
-        text_markup_base.BLUE: 2,
-        text_markup_base.GREEN: 3,
+        text_markup_base.BLUE: 12,
+        text_markup_base.GREEN: 9,
         text_markup_base.RED: 4,
         text_markup_base.YELLOW: 8,
         text_markup_base.RAINBOW: 0
@@ -107,7 +107,7 @@ class irc_markup(text_markup_base):
         if markup == text_markup_base.BOLD:
             return '\x02%s\x02' % text
         elif markup == text_markup_base.UNDERLINE:
-            return '\x15%s\x15' % text
+            return '\x1f%s\x1f' % text
         else:
             return text
 
