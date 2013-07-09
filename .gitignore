@@ -6,3 +6,6 @@ hanabIRC.conf
 HanabIRC.egg-info/
 build/
 dist/
+files.txt
+hanabIRC/log
+hanabIRC/run.log
