@@ -142,14 +142,19 @@ class Player(object):
             # use sets to find the missing mark
             missing = set(string.uppercase[:len(self.hand)+1]) - set([c.mark for c in self.hand])
 
-            if len(missing) != 1:
+            if len(missing) == 0:
                 log.info('Error: adding card to player\'s hand')
                 return
 
             # simply append the card after marking it.
             card.mark = list(missing)[0]
         else:
-            self.mark_index = (self.mark_index + 1) % len(string.uppercase)
+            cur_marks = [c.mark for c in self.hand]
+            for i in xrange(len(string.uppercase)):
+                self.mark_index = (self.mark_index + 1) % len(string.uppercase)
+                if not string.uppercase[self.mark_index] in cur_marks:
+                    break
+
             card.mark = string.uppercase[self.mark_index]
 
         self.hand.append(card)

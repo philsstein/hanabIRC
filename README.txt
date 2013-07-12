@@ -31,6 +31,8 @@ You may want to save the log file and run it in the background:
 History
 =======
 
+* 2013-07-12 - Version 0.2.32 - Handle card back wrap around correctly in A-Z case.
+* 2013-07-12 - Version 0.2.31 - added game options. one option so far: repeat_backs. If False use A-Z for card backs, else A-E
 * 2013-07-07 - Version 0.2.3 - Fix empty command ("!") error. 
 * 2013-06-21 - Version 0.2.2 - Fix underline control code - 0x1f instead of 0x15. Also use lighter blue and green to make a little more visible.
 * 2013-06-20 - Version 0.2.1 - Underline "Table" line to make it stand out a bit more.

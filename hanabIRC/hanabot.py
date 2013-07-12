@@ -581,6 +581,7 @@ class Hanabot(SingleServerIRCBot):
         'turns': '!turns - show turn order in current play ordering.',
         'game': '!game - show the game state for current channel.', 
         'games': '!games - show game states for all channels hanabot has joined.',
+        'option': '!option [opt1 opt2 ... ] - If no arguments given, list current game options. Otherwise set the options given.', 
         'hands': '!hands - show hands of players. Your own hand will be shown with the "backs" facing you, identified individually by a letter. When a card is removed the letter is reused for the new card.',
         'table': '!game - show the state of the table', 
         'discardpile': '!discardpile - show the current discard pile.',
