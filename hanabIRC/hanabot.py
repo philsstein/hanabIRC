@@ -51,7 +51,8 @@ class Hanabot(SingleServerIRCBot):
 
         # valid bot commands
         self.command_dict = {
-            'Game Management': ['new', 'delete', 'join', 'start', 'stop', 'leave', 'part'],
+            'Game Management': ['new', 'delete', 'join', 'start', 'stop',
+                                'leave', 'part', 'option'],
             'Hand Management': ['move', 'swap', 'sort'],
             'Game Action': ['play', 'hint', 'discard'],
             'Information': ['help', 'rules', 'turn', 'turns', 'game',
@@ -385,6 +386,10 @@ class Hanabot(SingleServerIRCBot):
         if self.games[event.target].game_over():
             del self.games[event.target]
 
+    def handle_option(self, args, event):
+        self._display(self.games[event.target].game_option(args), event,
+                      notice=True)
+
     def handle_hands(self, args, event):
         ''' Show hands of current game.  '''
         log.debug('got hands event. args: %s', args)
@@ -442,7 +447,8 @@ class Hanabot(SingleServerIRCBot):
         # send commands from the channel, so I can key the game to the channel.
         for chan, g in self.games.iteritems():
             if nick in g.players():
-                msg = 'You are already in a game in %s. One game per nick please.' % chan
+                msg = ('You are already in a game in %s. One game per nick '
+                       'per channel please.' % chan)
                 self._to_nick(event, msg)
                 return
 

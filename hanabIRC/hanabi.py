@@ -77,6 +77,10 @@ class Player(object):
         # The player's hand, a list of Cards
         self.hand = list()
 
+        # used to keep track of which mark to use when repeat backs option
+        # is False
+        self.mark_index = -1
+
     def sort_cards(self):
         '''
         re-sort the card into "orginal" positions.
@@ -130,18 +134,24 @@ class Player(object):
         else:
             return '%s: %s' % (self.name, ''.join([c.back() for c in self.hand]))
 
-    def add_card(self, card):
+    def add_card(self, card, reuse=True):
         '''Add a card to a player's hand. This method marks the back of the card
-        appropriately and is the only way you should add cards to a player's hand.'''
-        # use sets to find the missing mark
-        missing = set(string.uppercase[:len(self.hand)+1]) - set([c.mark for c in self.hand])
+        appropriately and is the only way you should add cards to a player's hand.
+        If reuse == True, then marks will be reused. Otherwise new ones will be used.'''
+        if reuse:
+            # use sets to find the missing mark
+            missing = set(string.uppercase[:len(self.hand)+1]) - set([c.mark for c in self.hand])
 
-        if len(missing) != 1:
-            log.info('Error: adding card to player\'s hand')
-            return
+            if len(missing) != 1:
+                log.info('Error: adding card to player\'s hand')
+                return
 
-        # simply append the card after marking it.
-        card.mark = list(missing)[0]
+            # simply append the card after marking it.
+            card.mark = list(missing)[0]
+        else:
+            self.mark_index = (self.mark_index + 1) % len(string.uppercase)
+            card.mark = string.uppercase[self.mark_index]
+
         self.hand.append(card)
 
 
@@ -177,6 +187,11 @@ class Game(object):
         # turn_order[0] is always current player's name
         self.turn_order = []
         self.max_players = 5
+
+        self.options = {
+            'repeat_backs': { 'value': True, 'help': 'Toggle between using '
+                             'A-E and A-Z for card backs.' }
+        }
 
         self.notes_up, self.notes_down = ('w', 'b')
         self.notes = [self.notes_up for i in range(8)]
@@ -261,7 +276,8 @@ class Game(object):
             
         c = self._players[nick].hand.pop(i)
         if len(self.deck):
-            self._players[nick].add_card(self.deck.pop(0))
+            self._players[nick].add_card(self.deck.pop(0),
+                                         self.options['repeat_backs']['value'])
        
         retVal.public.append('%s has discarded %s' % (nick, str(c)))
         self.discards[c.color].append(c.number)
@@ -283,6 +299,28 @@ class Game(object):
         else:
             # tell the next player it is their turn.
             retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
+
+        return retVal
+
+    def game_option(self, opts):
+        '''handle in game options.'''
+        retVal = gr()
+        if not opts:
+            retVal.public.append('Available options:')
+            for opt, info in self.options.iteritems():
+                retVal.public.append('%s (current value: %s): %s' % (
+                    opt, str(info['value']), info['help']))
+
+            return retVal
+
+        for opt in opts:
+            if not opt in self.options.keys():
+                retVal.public.append('Unsupported option: %s' % opt)
+            else:
+                # current options are all just True/False toggles.
+                self.options[opt]['value'] = not self.options[opt]['value']
+                retVal.public.append('%s is now set to %s' % (
+                    opt, self.options[opt]['value']))
 
         return retVal
 
@@ -319,7 +357,7 @@ class Game(object):
             self.discards[c.color].sort()
 
         if len(self.deck):
-            self._players[nick].add_card(self.deck.pop(0))
+            self._players[nick].add_card(self.deck.pop(0), self.options['repeat_backs']['value'])
             retVal.public.append('%s drew a new card from the deck into his or her hand.' % nick)
 
         self.turn_order.append(self.turn_order.pop(0))
@@ -587,7 +625,7 @@ class Game(object):
                        'another card. Adding card to each player\s hand.')
             for p in self._players.values():
                 if len(self.deck):
-                    p.add_card(self.deck.pop(0))
+                    p.add_card(self.deck.pop(0), self.options['repeat_backs']['value'])
 
         if self._playing:
             if nick == self.turn_order[0]:
@@ -639,7 +677,7 @@ class Game(object):
         card_count = 5 if len(self._players) < 4 else 4
         for player in self._players.values():
             for c in self.deck[:card_count]:
-                player.add_card(c)
+                player.add_card(c, self.options['repeat_backs']['value'])
 
             self.deck = self.deck[card_count:]
 
