@@ -150,6 +150,10 @@ class Hanabot(SingleServerIRCBot):
             # space separated words - need more IRC lib experience or docs.
             cmds = [str(c) for c in cmds[0].split()]
 
+            # check for empty command, i.e. !
+            if not cmds:
+                return ([], 'Giving a command would be more useful.')
+
             # op only commands - return after executing.
             if cmds[0] in self.commands_admin:
                 log.debug('running admin cmd %s', cmds[0])
