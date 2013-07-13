@@ -193,6 +193,9 @@ class Game(object):
         self.turn_order = []
         self.max_players = 5
 
+        # hist history for playback.
+        self._hints = defaultdict(list)
+
         self.options = {
             'repeat_backs': { 'value': True, 'help': 'Toggle between using '
                              'A-E and A-Z for card backs.' }
@@ -329,6 +332,22 @@ class Game(object):
 
         return retVal
 
+    def hints(self, nick):
+        retVal = gr()
+        if not self._in_game_is_turn(nick, retVal):
+            # we don't care whose turn it is.
+            if nick == self.turn_order[0]:
+                # nick's turn, so in_game_is_turn gave false
+                # for other non-turn reasons. 
+                return retVal
+
+        if not self._hints[nick]:
+            retVal.private[nick].append('You\'ve yet to get any hints.')
+        else:
+            retVal.private[nick] = list(self._hints[nick])
+
+        return retVal
+
     def play_card(self, nick, X):
         '''Have player "nick" play card X from his/her hand. "X" is the 
         card ID, e.g. A, B, C, ... N. The output is for group
@@ -453,15 +472,18 @@ class Game(object):
         cards = self._get_cards(player, hint)
 
         if not len(cards):
-            retVal.public.append('======== %s has given %s a hint: you have no %s cards' % (
+            hint_str = ('%s has given %s a hint: you have no %s cards' % (
                        (nick, player, str(hint))))
         else:
             plural = 's ' if len(cards) > 1 else ' '
             is_are = 'are ' if len(cards) > 1 else 'is '
             a = 'a ' if isinstance(hint, int) else ''
-            retVal.public.append('======== %s has given %s a hint: your card%s%s %s%s%s' % (
+            hint_str = ('%s has given %s a hint: your card%s%s %s%s%s' % (
                        (nick, player, plural, ', '.join([c.mark for c in cards]), is_are, 
                         a, str(hint))))
+
+        retVal.public.append('======== %s' % hint_str)
+        self._hints[player].append(hint_str)
 
         self.turn_order.append(self.turn_order.pop(0))
         self._flip(self.notes, self.notes_up, self.notes_down)

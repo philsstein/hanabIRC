@@ -394,6 +394,15 @@ class Hanabot(SingleServerIRCBot):
         self._display(self.games[event.target].game_option(args), event,
                       notice=True)
 
+    def handle_hints(self, args, event):
+        log.debug('got hints event. args: %s', args)
+        # play the card and show the repsonse
+        if not self._check_args(args, 0, [], event, 'hints'):
+            return 
+
+        nick = event.source.nick
+        self._display(self.games[event.target].hints(nick), event)
+
     def handle_hands(self, args, event):
         ''' Show hands of current game.  '''
         log.debug('got hands event. args: %s', args)

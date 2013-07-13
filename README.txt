@@ -31,6 +31,7 @@ You may want to save the log file and run it in the background:
 History
 =======
 
+* 2013-07-13 - Version 0.2.33 - New command !hints shows all hints given to the user during current game.
 * 2013-07-12 - Version 0.2.32 - Handle card back wrap around correctly in A-Z case.
 * 2013-07-12 - Version 0.2.31 - added game options. one option so far: repeat_backs. If False use A-Z for card backs, else A-E
 * 2013-07-07 - Version 0.2.3 - Fix empty command ("!") error. 

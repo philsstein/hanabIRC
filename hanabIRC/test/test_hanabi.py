@@ -92,6 +92,20 @@ class test_hanabi(unittest2.TestCase):
         self.game.play_card(self.game.player_turn(), 'A')
         print self.game.play_card(self.game.player_turn(), 'B')
 
+    def test_hints(self):
+        self.setUpGame()
+        p1, p2 = self.game.turn_order[0], self.game.turn_order[1]
+        self.game.hint_player(p1, p2, 5)
+        self.game.hint_player(p2, p1, 5)
+        self.game.hint_player(p1, p2, 5)
+        self.game.hint_player(p2, p1, 5)
+        self.game.hint_player(p1, p2, 5)
+
+        gr = self.game.hints(p1)
+        self.assertTrue(len(gr.private[p1]) == 2)
+        gr = self.game.hints(p2)
+        self.assertTrue(len(gr.private[p2]) == 3)
+
 if __name__ == '__main__':
     unittest2.main()
 
