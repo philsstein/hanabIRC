@@ -55,7 +55,7 @@ class Hanabot(SingleServerIRCBot):
                                 'leave', 'part', 'option'],
             'Hand Management': ['move', 'swap', 'sort'],
             'Game Action': ['play', 'hint', 'discard'],
-            'Information': ['help', 'rules', 'turn', 'turns', 'game',
+            'Information': ['help', 'rules', 'turn', 'turns', 'game', 'hints',
                             'games', 'hands', 'table', 'discardpile', 'version']
         }
         

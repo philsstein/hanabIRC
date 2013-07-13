@@ -336,7 +336,7 @@ class Game(object):
         retVal = gr()
         if not self._in_game_is_turn(nick, retVal):
             # we don't care whose turn it is.
-            if nick == self.turn_order[0]:
+            if self.turn_order and nick == self.turn_order[0]:
                 # nick's turn, so in_game_is_turn gave false
                 # for other non-turn reasons. 
                 return retVal
@@ -791,7 +791,7 @@ class Game(object):
         '''Return True if the player is in the game and is his/her turn
         else return False.'''
         if not self._playing or self._game_over:
-            reponse.private('The game is not active.')
+            response.private[nick].append('The game is not active.')
             return False
         elif not nick in self._players.keys():
             response.private[nick].append('You are not in game.')
