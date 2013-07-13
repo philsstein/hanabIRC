@@ -334,12 +334,8 @@ class Game(object):
 
     def hints(self, nick):
         retVal = gr()
-        if not self._in_game_is_turn(nick, retVal):
-            # we don't care whose turn it is.
-            if self.turn_order and nick == self.turn_order[0]:
-                # nick's turn, so in_game_is_turn gave false
-                # for other non-turn reasons. 
-                return retVal
+        if not self._in_game(nick, retVal):
+            return gr(private={nick:'You can only see hints if you\'re in the game,'})
 
         if not self._hints[nick]:
             retVal.private[nick].append('You\'ve yet to get any hints.')
@@ -787,9 +783,7 @@ class Game(object):
             else:
                 return False
 
-    def _in_game_is_turn(self, nick, response):
-        '''Return True if the player is in the game and is his/her turn
-        else return False.'''
+    def _in_game(self, nick, response):
         if not self._playing or self._game_over:
             response.private[nick].append('The game is not active.')
             return False
@@ -799,11 +793,23 @@ class Game(object):
         elif not self._playing:
             response.private[nick].append('The game has not yet started')
             return False
-        elif self.turn_order[0] != nick:
+
+        return True
+
+    def _is_turn(self, nick, response):
+        if self.turn_order[0] != nick:
             response.private[nick].append('It is not your turn. It is %s\'s turn.' % self.turn_order[0])
             return False
 
         return True
+
+    def _in_game_is_turn(self, nick, response):
+        '''Return True if the player is in the game and is his/her turn
+        else return False.'''
+        in_game = self._in_game(nick, response)
+        is_turn = self._is_turn(nick, response)
+
+        return in_game and is_turn
 
 if __name__ == "__main__":
     import doctest
