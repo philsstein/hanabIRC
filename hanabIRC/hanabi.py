@@ -197,7 +197,7 @@ class Game(object):
         self._hints = defaultdict(list)
 
         self.options = {
-            'repeat_backs': { 'value': True, 'help': 'Toggle between using '
+            'repeat_backs': { 'value': False, 'help': 'Toggle between using '
                              'A-E and A-Z for card backs.' }
         }
 

@@ -58,6 +58,7 @@ class test_hanabi(unittest2.TestCase):
         # more turn.
         self.setUpGame()
         self.game.deck = [Card('red', 1, 'A')]
+        self.game.options['repeat_backs']['value'] = True
         for c in self.game.deck:
             c.markup = xterm_markup()
 
