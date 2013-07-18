@@ -4,7 +4,7 @@
     file or the command line and starts a hanabi playing IRC bot
     on the configured server and channel.
 
-    usage: hanabIRC.py [-h] [-s SERVER] [-c CHANNEL]
+    usage: hanabIRC.py [-h] [-s SERVER] [-c CHANNELS]
                        [-l {debug,info,warning,error,critical}]
                        [--config CONFFILE]
     
@@ -14,8 +14,8 @@
       -h, --help            show this help message and exit
       -s SERVER, --server SERVER
                             The IRC server to connect to.
-      -c CHANNEL, --channel CHANNEL
-                            The IRC #channel to connect to.
+      -c CHANNELS, --channels CHANNELs
+                            The IRC #channel to connect to as a comma separated list.
       -l {debug,info,warning,error,critical}, --loglevel {debug,info,warning,error,critical}
                             Set the global log level
       --config CONFFILE     Configuration file. Command line will override values
@@ -38,9 +38,8 @@ def make_conf():
     parser = SafeConfigParser()
     parser.add_section(section)
     parser.set(section, 'server', 'irc.freenode.net')
-    parser.set(section, 'channel', 'hanabIRC')
+    parser.set(section, 'channels', 'hanabIRC,playhanabi')
     parser.set(section, 'port', '6667')
-    parser.set(section, 'notify_channel', 'boardgames')
     parser.set(section, 'nick', 'hanabot')
     parser.set(section, 'nick_pass', 'PASSWORD')
     parser.set(section, 'topic', 'Welcome to Hanabi on IRC')
@@ -55,8 +54,9 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description=desc)
     argparser.add_argument('-s', '--server', type=str, dest='server',
                            help='The IRC server to connect to.')
-    argparser.add_argument('-c', '--channel', type=str, dest='channel',
-                           help='The IRC #channel to connect to.')
+    argparser.add_argument('-c', '--channels', type=str, dest='channels',
+                           help='The IRC #channels to connect to. (comma '
+                            ' separted list.)')
     argparser.add_argument('-l', '--loglevel', type=str, dest='loglevel',
                            default='info', choices=['debug', 'info',
                                                     'warning', 'error',
@@ -121,23 +121,21 @@ if __name__ == "__main__":
         sys.exit(1)
 
     server = confparse.get('general', 'server')
-    channel = confparse.get('general', 'channel')
+    channels = confparse.get('general', 'channels')
     nick = confparse.get('general', 'nick')
     nick_pass = confparse.get('general', 'nick_pass')
     topic = confparse.get('general', 'topic')
-    if confparse.has_option('general', 'notify_channel'):
-        notify_channel = confparse.get('general', 'notify_channel')
-    else:
-        notify_channel = None
 
     server = args.server if args.server else server
-    channel = args.channel if args.channel else channel
+    channels = args.channels if args.channels else channels
     nick = args.nick if args.nick else nick
     nick_pass = args.nick_pass if args.nick_pass else nick_pass
+
+    channels = channels.split(',')
 
     # GTL - uncomment these once they are supported.
     # port = args.port if args.port else conf.port
 
     # ok - now we can do some actual work.
-    bot = Hanabot(server, channel, nick, nick_pass, topic=topic, notify_channel=notify_channel)
+    bot = Hanabot(server, channels, nick, nick_pass, topic=topic)
     bot.start()

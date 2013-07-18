@@ -24,13 +24,16 @@ Run the bot:
 
 > hanabIRC
 
-You may want to save the log file and run it in the background:
+You may want to run the bot in screen or tmux.
 
-> hanabIRC 2>&1 > hanabIRC.log & 
+> tmux 
+> hanabIRC 2>&1 | tee hanabot.log
+> ^B-d  # to unattach from tmux.
 
 History
 =======
 
+* 2013-07-18 - Version 0.2.4 - Can have multiple home channels now.
 * 2013-07-17 - Version 0.2.35 - Make repeat_backs == False the default.
 * 2013-07-13 - Version 0.2.34 - Tweak to !hints to fix oddness when used before game starts.
 * 2013-07-13 - Version 0.2.33 - New command !hints shows all hints given to the user during current game.

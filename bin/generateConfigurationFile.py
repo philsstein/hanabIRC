@@ -17,11 +17,11 @@ if __name__ == "__main__":
     parser = SafeConfigParser()
     parser.add_section(section)
     parser.set(section, 'server', 'irc.freenode.net')
-    parser.set(section, 'channel', 'hanabIRC')
+    parser.set(section, 'channels', 'hanabIRC,playhanabi')
     parser.set(section, 'port', '6667')
-    parser.set(section, 'notify_channel', 'boardgames')
     parser.set(section, 'nick', 'hanabot')
     parser.set(section, 'nick_pass', 'PASSWORD')
+    parser.set(section, 'topic', 'Welcome to Hanabi on IRC')
 
     if args.outfile:
         with open(args.outfile, 'wb') as fd:

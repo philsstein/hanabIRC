@@ -29,10 +29,9 @@ log = logging.getLogger(__name__)
 
 
 class Hanabot(SingleServerIRCBot):
-    def __init__(self, server, channel, nick='hanabot', nick_pass=None, port=6667, topic=None, 
-                 notify_channel=None):
+    def __init__(self, server, channels, nick='hanabot', nick_pass=None, port=6667, topic=None):
         log.debug('new bot started at %s:%d@#%s as %s', server, port,
-                  channel, nick)
+                  channels, nick)
         SingleServerIRCBot.__init__(
             self,
             server_list=[(server, port)],
@@ -42,12 +41,10 @@ class Hanabot(SingleServerIRCBot):
         self.nick_pass = nick_pass
         self.nick_name = nick  
         self.topic = topic
-        self.notify_channel = notify_channel
-        if not self.notify_channel[0] == '#':
-            self.notify_channel = '#' + self.notify_channel
 
-        # force channel to start with #
-        self.initial_channel = channel if channel[0] == '#' else '#%s' % channel
+        # force channels to start with #
+        self.home_channels = [c if c[0] == '#' else '#%s' % c for c in channels]
+        log.debug('Home channels: %s' % self.home_channels)
 
         # valid bot commands
         self.command_dict = {
@@ -85,8 +82,9 @@ class Hanabot(SingleServerIRCBot):
         if self.nick_pass:
             msg = 'IDENTIFY %s %s' % (self.nick_name, self.nick_pass)
             self.connection.privmsg('NickServ', msg)
-
-        conn.join(self.initial_channel)
+        
+        for chan in self.home_channels:
+            conn.join(chan)
 
     def on_kick(self, conn, event):
         time.sleep(1)
@@ -439,15 +437,15 @@ class Hanabot(SingleServerIRCBot):
         self._display(GameResponse('New game started by %s. Accepting joins.' % nick),
                       event, notice=True)
 
-        if self.notify_channel:
-            m = irc_markup()
-            name = ''
-            for i, c in enumerate('Hanabi'):
-                name += m.color(c, m.Colors[i % len(m.Colors)])
+        m = irc_markup()
+        name = ''
+        for i, c in enumerate('Hanabi'):
+            name += m.color(c, m.Colors[i % len(m.Colors)])
 
-            msg = 'New game of %s starting in channel %s.' % (name, event.target)
+        msg = 'New game of %s starting in channel %s.' % (name, event.target)
+        for chan in self.home_channels: 
             log.debug('game notification sent to %s: %s', event.target, msg)
-            self.connection.notice(self.notify_channel, msg)
+            self.connection.notice(chan, msg)
 
     def handle_join(self, args, event):
         '''join a game, if one is active.'''
@@ -524,7 +522,7 @@ class Hanabot(SingleServerIRCBot):
         if not self._check_args(args, 0, [], event, 'part'):
             return 
 
-        if event.target != self.initial_channel:
+        if not event.target in self.home_channels:
             self._to_chan(event, 'Hanabot leaving channel.')
             self.connection.part(event.target)
         else:
