@@ -29,7 +29,7 @@ from hanabIRC import __version__
 log = logging.getLogger(__name__)
 
 class Hanabot(SingleServerIRCBot):
-    def __init__(self, server, channels, nick='hanabot', nick_pass=None, port=6667, topic=None):
+    def __init__(self, server, channels, nick, nick_pass, port, topic, hist_path):
         log.debug('new bot started at %s:%d@#%s as %s', server, port,
                   channels, nick)
         SingleServerIRCBot.__init__(
@@ -42,7 +42,7 @@ class Hanabot(SingleServerIRCBot):
         self.nick_name = nick  
         self.topic = topic
 
-        game_history.hist_file = 'hanabi.game.hist'
+        game_history.hist_file = hist_path
 
         # force channels to start with #
         self.home_channels = [c if c[0] == '#' else '#%s' % c for c in channels]

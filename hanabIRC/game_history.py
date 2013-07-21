@@ -43,6 +43,14 @@ class game_history(object):
 
     @staticmethod
     def _put_hist(hist):
+        if not os.path.exists(game_history.hist_file):
+            try:
+                os.makedirs(os.path.dirname(game_history.hist_file))
+            except OSError as e:
+                log.warn('Unable to create history file. Most likely permission '
+                         'denied.')
+                return
+
         with open(game_history.hist_file, 'w') as fd:
             fd.write(yaml.safe_dump(hist))
 

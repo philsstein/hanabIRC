@@ -43,6 +43,7 @@ def make_conf():
     parser.set(section, 'nick', 'hanabot')
     parser.set(section, 'nick_pass', 'PASSWORD')
     parser.set(section, 'topic', 'Welcome to Hanabi on IRC')
+    parser.set(section, 'history_file', '/var/hanabIRC/history')
     parser.write(sys.stdout)
 
 if __name__ == "__main__":
@@ -125,6 +126,7 @@ if __name__ == "__main__":
     nick = confparse.get('general', 'nick')
     nick_pass = confparse.get('general', 'nick_pass')
     topic = confparse.get('general', 'topic')
+    hist_file = confparse.get('general', 'history_file')
 
     server = args.server if args.server else server
     channels = args.channels if args.channels else channels
@@ -137,5 +139,5 @@ if __name__ == "__main__":
     # port = args.port if args.port else conf.port
 
     # ok - now we can do some actual work.
-    bot = Hanabot(server, channels, nick, nick_pass, topic=topic)
+    bot = Hanabot(server, channels, nick, nick_pass, 6667, topic, hist_file)
     bot.start()
