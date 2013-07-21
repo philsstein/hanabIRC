@@ -2,6 +2,9 @@ from GameResponse import GameResponse
 import yaml
 import time
 import os
+import logging
+
+log = logging.getLogger(__name__)
 
 class game_history(object):
     hist_file = None
