@@ -33,6 +33,7 @@ You may want to run the bot in screen or tmux.
 History
 =======
 
+* 2013-07-21 - Version 0.2.5 - !last n command added: show results for the last N games. History is persistant across restarts. 
 * 2013-07-18 - Version 0.2.4 - Can have multiple home channels now.
 * 2013-07-17 - Version 0.2.35 - Make repeat_backs == False the default.
 * 2013-07-13 - Version 0.2.34 - Tweak to !hints to fix oddness when used before game starts.

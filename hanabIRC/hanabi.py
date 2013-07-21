@@ -256,6 +256,9 @@ class Game(object):
     def game_over(self):
         return self._game_over
 
+    def score(self):
+        return sum([len(cs) for cs in self.table.values()])
+
     def players(self):
         '''return a list of player ids in the game.'''
         return self._players.keys()

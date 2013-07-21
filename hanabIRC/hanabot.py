@@ -19,6 +19,7 @@ import traceback
 from collections import defaultdict
 
 from hanabi import Game
+from game_history import game_history
 from text_markup import irc_markup
 from GameResponse import GameResponse
 from irc.bot import SingleServerIRCBot
@@ -26,7 +27,6 @@ from irc.client import VERSION as irc_client_version
 from hanabIRC import __version__
 
 log = logging.getLogger(__name__)
-
 
 class Hanabot(SingleServerIRCBot):
     def __init__(self, server, channels, nick='hanabot', nick_pass=None, port=6667, topic=None):
@@ -42,6 +42,8 @@ class Hanabot(SingleServerIRCBot):
         self.nick_name = nick  
         self.topic = topic
 
+        game_history.hist_file = 'hanabi.game.hist'
+
         # force channels to start with #
         self.home_channels = [c if c[0] == '#' else '#%s' % c for c in channels]
         log.debug('Home channels: %s' % self.home_channels)
@@ -53,7 +55,8 @@ class Hanabot(SingleServerIRCBot):
             'Hand Management': ['move', 'swap', 'sort'],
             'Game Action': ['play', 'hint', 'discard'],
             'Information': ['help', 'rules', 'turn', 'turns', 'game', 'hints',
-                            'games', 'hands', 'table', 'discardpile', 'version']
+                            'games', 'hands', 'table', 'discardpile', 'version',
+                            'last']
         }
         
         self.commands = list()
@@ -64,7 +67,8 @@ class Hanabot(SingleServerIRCBot):
 
         # these commands can execute without an active game.
         # otherwise the command handlers can assume an active game.
-        self.no_game_commands = ['new', 'help', 'rules', 'game', 'games', 'part', 'version']
+        self.no_game_commands = ['new', 'help', 'rules', 'game', 'games', 'part',
+                                 'version', 'last']
 
         # games is a dict indexed by channel name, value is the Game object.
         self.games = dict()
@@ -176,13 +180,15 @@ class Hanabot(SingleServerIRCBot):
                         msg = 'There is no active game in %s! Start one with !new.' % event.target
                         self._to_chan(event, msg)
                         return
-                
+            
                 # invoke it!
                 method(cmds[1:], event)
 
                 # clear possibly ended game after action.
                 if event.target in self.games:
                     if self.games[event.target].game_over():
+                        g = self.games[event.target]
+                        game_history.add_game(g.score(), g.players(), event.target)
                         del self.games[event.target] 
 
         except Exception, e:
@@ -281,8 +287,6 @@ class Hanabot(SingleServerIRCBot):
         # now tell the engine about the !hint
         nick = event.source.nick
         self._display(self.games[event.target].hint_player(nick, player=args[0], hint=args[1]), event)
-        if self.games[event.target].game_over():
-            del self.games[event.target]
 
     def handle_rules(self, args, event):
         log.debug('got rules event. args: %s', args)
@@ -322,6 +326,17 @@ class Hanabot(SingleServerIRCBot):
     def handle_version(self, args, event):
         self._to_chan(event, 'version: %s' % __version__)
 
+    def handle_last(self, args, event):
+        if not len(args):
+            n = 10
+        else:
+            if self._check_args(args, 1, [int], event, 'last'):
+                n = args[0]
+            else:
+                return
+
+        self._display(game_history.last_games(n), event)
+
     def handle_game(self, args, event):
         log.debug('got game event. args: %s', args)
         if not self._check_args(args, 0, [], event, 'game'):
@@ -344,8 +359,6 @@ class Hanabot(SingleServerIRCBot):
 
         nick = event.source.nick
         self._display(self.games[event.target].stop_game(nick), event)
-        if self.games[event.target].in_game(nick):
-            del self.games[event.target]
 
     def handle_turn(self, args, event):
         if not self._check_args(args, 0, [], event, 'turn'):
@@ -354,7 +367,7 @@ class Hanabot(SingleServerIRCBot):
         self._display(self.games[event.target].turn(), event)
 
     def handle_turns(self, args, event):
-        if not self._check_args(args, 0, [], event, 'turn'):
+        if not self._check_args(args, 0, [], event, 'turns'):
             return 
 
         self._display(self.games[event.target].turns(), event)
@@ -374,8 +387,6 @@ class Hanabot(SingleServerIRCBot):
         # discard the card and show the repsonse
         nick = event.source.nick
         self._display(self.games[event.target].discard_card(nick, args[0]), event)
-        if self.games[event.target].game_over():
-            del self.games[event.target]
 
     def handle_play(self, args, event):
         log.debug('got play event. args: %s', args)
@@ -385,8 +396,6 @@ class Hanabot(SingleServerIRCBot):
 
         nick = event.source.nick
         self._display(self.games[event.target].play_card(nick, args[0]), event)
-        if self.games[event.target].game_over():
-            del self.games[event.target]
 
     def handle_option(self, args, event):
         self._display(self.games[event.target].game_option(args), event,
@@ -570,7 +579,7 @@ class Hanabot(SingleServerIRCBot):
     ####### static class data 
     _command_usage = {
         'new': '!new [channel] - create a new game. If channel is given, hanabot will join that channel. (Then use !new in that channel to create a new game there.)', 
-        'delete': '!delete - delete a game.', 
+        'delete': '!delete - delete a game. Deleted games are not added to game history.', 
         'join': '!join - join a game. If not game in channel, use !new to create one.', 
         'start': '!start [rainbow_5 | rainbow_10] - start a game. The game must have at least two players. If rainbow_5 is given, 5 rainbow cards will be added to the deck. If rainbow_10 is given, 10 rainbow cards will be added.',
         'stop': 'Immediately score a game, then stop/kill it.',
@@ -588,6 +597,7 @@ class Hanabot(SingleServerIRCBot):
         'turns': '!turns - show turn order in current play ordering.',
         'game': '!game - show the game state for current channel.', 
         'games': '!games - show game states for all channels hanabot has joined.',
+        'last': '!last [n] - Show the results of the last N games. If n not given, then show results for the last 10 games.',
         'option': '!option [opt1 opt2 ... ] - If no arguments given, list current game options. Otherwise set the options given.', 
         'hands': '!hands - show hands of players. Your own hand will be shown with the "backs" facing you, identified individually by a letter. When a card is removed the letter is reused for the new card.',
         'table': '!game - show the state of the table', 
