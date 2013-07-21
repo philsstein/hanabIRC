@@ -12,6 +12,6 @@ setup(
     description='An IRC bot that organizes and plays the card game Hanabi.',
     long_description=open('README.txt').read(),
     url='https://github.com/philsstein/hanabIRC',
-    install_requires=['irc'],
+    install_requires=['irc', 'PyYAML'],
     scripts=['bin/hanabIRC']
 )
