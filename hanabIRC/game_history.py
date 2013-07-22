@@ -19,16 +19,15 @@ class game_history(object):
         game_history._put_hist(hist)
 
     @staticmethod
-    def last_games(n=10):
+    def last_games(nick, n=10):
         gr = GameResponse()
         hist=game_history._get_hist()
         if not len(hist):
             return GameResponse(retVal=False)
 
-        gr.public.append('Results of the last %d games:' % n)
+        gr.private[nick].append('Results of the last %d games:' % n)
         for game in sorted(hist['last_games'][-n:]):
-            print 'game:', game
-            gr.public.append('In %s - score: %d, players: %s' % (
+            gr.private[nick].append('In %s - score: %d, players: %s' % (
                 game[3], int(game[1]), ', '.join(game[2])))
 
         return gr
@@ -48,20 +47,25 @@ class game_history(object):
     def _put_hist(hist):
         if not os.path.exists(game_history.hist_file):
             d = os.path.dirname(game_history.hist_file)
-            if not os.path.exists(d):
+            if d and not os.path.exists(d):
                 try:
                     os.makedirs(d)
                 except OSError as e:
                     log.error('Unable to make hist file dir %s: %s' % (d, e))
                     return
-
+        
+        # this is remarkably wasteful. rewrites the entire file when 
+        # only a single entry may have been added.
         with open(game_history.hist_file, 'w') as fd:
             fd.write(yaml.safe_dump(hist))
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     game_history.hist_file = 'game.hist.test'
     game_history.add_game(12, ['joe', 'henry'], '#hanbabIRC')
     game_history.add_game(14, ['joe', 'sandy'], '#hanbabIRC2')
     game_history.add_game(24, ['joe', 'sandy'], '#hanbabIRC2')
 
-    print game_history.last_games()
+    print game_history.last_games('nicolas')
+
+    os.unlink(game_history.hist_file)

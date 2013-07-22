@@ -334,8 +334,8 @@ class Hanabot(SingleServerIRCBot):
                 n = args[0]
             else:
                 return
-
-        self._display(game_history.last_games(n), event)
+        nick = event.source.nick
+        self._display(game_history.last_games(nick, n), event)
 
     def handle_game(self, args, event):
         log.debug('got game event. args: %s', args)
