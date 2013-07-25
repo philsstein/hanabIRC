@@ -217,7 +217,7 @@ class Game(object):
         self._game_over = False
         self._rainbow_game = False  # True if using rainbow (multicolor) cards.
 
-        self.game_type = 'standard'  # different if rainbow. set in start_game()
+        self._game_type = 'standard'  # different if rainbow. set in start_game()
 
         # table is a dict of lists of cards, indexed by color. 
         self.table = defaultdict(list)
@@ -259,7 +259,7 @@ class Game(object):
         return self._game_over
 
     def game_type(self):
-        return self.game_type
+        return self._game_type
 
     def score(self):
         return sum([len(cs) for cs in self.table.values()])
@@ -693,11 +693,11 @@ class Game(object):
                     self._rainbow_game = True
                     self.colors.append('rainbow')
                     if opt.endswith('5'):
-                        self.game_type = 'rainbow 5'
+                        self._game_type = 'rainbow 5'
                         retVal.public.append('Adding 5 rainbow cards to the deck')
                         self.deck += [Card('rainbow', i) for i in xrange(1,6)]
                     else:
-                        self.game_type = 'rainbow 10'
+                        self._game_type = 'rainbow 10'
                         retVal.public.append('Adding 10 rainbow cards to the deck')
                         self.deck += [Card('rainbow', i) for i in self.card_distribution]
 
