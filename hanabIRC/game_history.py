@@ -11,9 +11,9 @@ class game_history(object):
     max_last_games = 512
 
     @staticmethod
-    def add_game(score, players, channel):
+    def add_game(score, players, game_type, channel):
         hist = game_history._get_hist()
-        hist['last_games'].append([time.time(), score, players, channel])
+        hist['last_games'].append([time.time(), score, players, game_type, channel])
         # trim
         hist['last_games'][:] = hist['last_games'][-game_history.max_last_games:]
         game_history._put_hist(hist)
@@ -27,8 +27,8 @@ class game_history(object):
 
         gr.private[nick].append('Results of the last %d games:' % n)
         for game in sorted(hist['last_games'][-n:]):
-            gr.private[nick].append('In %s - score: %d, players: %s' % (
-                game[3], int(game[1]), ', '.join(game[2])))
+            gr.private[nick].append('In %s - score: %d, type: %s, players: %s' % (
+                game[4], int(game[1]), game[3], ', '.join(game[2])))
 
         return gr
 
@@ -62,9 +62,9 @@ class game_history(object):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     game_history.hist_file = 'game.hist.test'
-    game_history.add_game(12, ['joe', 'henry'], '#hanbabIRC')
-    game_history.add_game(14, ['joe', 'sandy'], '#hanbabIRC2')
-    game_history.add_game(24, ['joe', 'sandy'], '#hanbabIRC2')
+    game_history.add_game(12, ['joe', 'henry'], 'standard', '#hanbabIRC')
+    game_history.add_game(14, ['joe', 'sandy'], 'standard', '#hanbabIRC2')
+    game_history.add_game(24, ['joe', 'sandy'], 'rainbow 5', '#hanbabIRC2')
 
     print game_history.last_games('nicolas')
 

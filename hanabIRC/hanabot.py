@@ -188,7 +188,8 @@ class Hanabot(SingleServerIRCBot):
                 if event.target in self.games:
                     if self.games[event.target].game_over():
                         g = self.games[event.target]
-                        game_history.add_game(g.score(), g.players(), event.target)
+                        game_history.add_game(g.score(), g.players(),
+                                              g.game_type(), event.target)
                         del self.games[event.target] 
 
         except Exception, e:

@@ -33,6 +33,7 @@ You may want to run the bot in screen or tmux.
 History
 =======
 
+* 2013-07-25 - Version 1.0.2 - Show game type in !last output. 
 * 2013-07-21 - Version 1.0.1 - Show !last only to nick that requested it in order to not ping people in channel. 
 * 2013-07-21 - Version 1.0.0 - Same as 0.2.5
 * 2013-07-21 - Version 0.2.50 - !last n command added: show results for the last N games. History is persistant across restarts. 
