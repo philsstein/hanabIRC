@@ -262,7 +262,10 @@ class Game(object):
         return self._game_type
 
     def score(self):
-        return sum([len(cs) for cs in self.table.values()])
+        if not self.storms_down in self.storms:
+            return 0
+        else:
+            return sum([len(cs) for cs in self.table.values()])
 
     def players(self):
         '''return a list of player ids in the game.'''
@@ -746,7 +749,8 @@ class Game(object):
             return False
 
     def _end_game(self):
-        score = sum([len(cs) for cs in self.table.values()])
+        score = self.score()
+
         self._game_over = True
         self._playing = False
         pub = ['-------------------------']
