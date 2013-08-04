@@ -52,6 +52,21 @@ class test_hanabi(unittest2.TestCase):
         print self.game.turn()
         print self.game.hint_player(players[1], players[0], 'blue')
 
+    def test_show_hints(self):
+        p0, p1 = players[0], players[1]
+        self.setUpGame()
+        self.game.hint_player(p0, p1, 1)
+        self.game.hint_player(p1, p0, 1)
+        self.game.hint_player(p0, p1, 1)
+
+        print self.game.hints(p0)
+        hints = self.game.hints(p0)
+        self.assertTrue(len(hints.private[p0]) == 1)
+        
+        print self.game.hints(p1, show_all=True)
+        hints = self.game.hints(p1, show_all=True)
+        self.assertTrue(len(hints.private[p1]) == 3)
+
     def test_lastround(self):
         # Make the deck have one card, let a player discard.
         # Then make sure each player (inc. initial one) gets one

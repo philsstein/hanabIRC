@@ -343,15 +343,17 @@ class Game(object):
 
         return retVal
 
-    def hints(self, nick):
+    def hints(self, nick, show_all=False):
         retVal = gr()
-        if not self._in_game(nick, retVal):
-            return gr(private={nick:'You can only see hints if you\'re in the game,'})
+        retVal.private[nick].append('You\'ve yet to get any hints.')
+        if show_all:
+            all_hints = [hint for p in self._hints.values() for hint in p]
+            if all_hints:
+                retVal.private[nick] = all_hints
 
-        if not self._hints[nick]:
-            retVal.private[nick].append('You\'ve yet to get any hints.')
         else:
-            retVal.private[nick] = list(self._hints[nick])
+            if self._hints[nick]:
+                retVal.private[nick] = self._hints[nick]
 
         return retVal
 

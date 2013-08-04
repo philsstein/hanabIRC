@@ -404,12 +404,11 @@ class Hanabot(SingleServerIRCBot):
 
     def handle_hints(self, args, event):
         log.debug('got hints event. args: %s', args)
-        # play the card and show the repsonse
-        if not self._check_args(args, 0, [], event, 'hints'):
-            return 
-
         nick = event.source.nick
-        self._display(self.games[event.target].hints(nick), event)
+        if len(args) == 1 and args[0] == 'all':
+            self._display(self.games[event.target].hints(nick, show_all=True), event)
+        else:
+            self._display(self.games[event.target].hints(nick), event)
 
     def handle_hands(self, args, event):
         ''' Show hands of current game.  '''
@@ -598,6 +597,7 @@ class Hanabot(SingleServerIRCBot):
         'turns': '!turns - show turn order in current play ordering.',
         'game': '!game - show the game state for current channel.', 
         'games': '!games - show game states for all channels hanabot has joined.',
+        'hints': '!hints [all] - show the hints given in the current game. If "all" is given, show all hints otherwise show only hints given to you.',
         'last': '!last [n] - Show the results of the last N games. If n not given, then show results for the last 10 games.',
         'option': '!option [opt1 opt2 ... ] - If no arguments given, list current game options. Otherwise set the options given.', 
         'hands': '!hands - show hands of players. Your own hand will be shown with the "backs" facing you, identified individually by a letter. When a card is removed the letter is reused for the new card.',
