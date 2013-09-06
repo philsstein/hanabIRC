@@ -17,6 +17,7 @@ import sys
 import os
 import traceback
 from collections import defaultdict
+from itertools import chain, islice
 
 from hanabi import Game
 from game_history import game_history
@@ -41,6 +42,11 @@ class Hanabot(SingleServerIRCBot):
         self.nick_pass = nick_pass
         self.nick_name = nick  
         self.topic = topic
+        # these should be in the config file so that different network
+        # rate limiting polices can be specified. These defaults
+        # are tuned to freenode.
+        self.rate_limit_max_lines = 20
+        self.rate_limit_sleep_time = 3
 
         game_history.hist_file = hist_path
 
@@ -205,22 +211,49 @@ class Hanabot(SingleServerIRCBot):
                 log.critical('%s', err)
                 self._to_chan(event, err)
 
+
+    def _chunked(self, seq, chunksize):
+        '''return chunksized chunks of seq as an iterator.'''
+        def _ichunked(seq, chunksize):
+            it = iter(seq)
+            while True:
+                yield chain([it.next()], islice(it, chunksize-1))
+
+        for chunk in _ichunked(seq, chunksize):
+            ret_val = list(chunk)
+            log.debug('yielding chunk of size: %d', len(ret_val))
+            yield ret_val
+
     # some sugar for sending msgs
     def _display(self, response, event, notice=False):
         '''response is a GameResponse instance. event is an irclib event, which gives us nick and channel.'''
+        # this whole function should be in a thread. We rate limit
+        # by sleeping here, which puts all other games are on pause.
+        # which is bad. 
         if not response:
             log.error('Got False response, not displaying output.')
         else:
-            for line in response.public:
-                if notice:
-                    self.connection.notice(event.target, line)
-                else:
-                    self.connection.privmsg(event.target, line)
+            for lines in self._chunked(response.public,
+                                       self.rate_limit_max_lines):
+                for line in lines:
+                    if notice:
+                        self.connection.notice(event.target, line)
+                    else:
+                        self.connection.privmsg(event.target, line)
+               
+                if len(lines) == self.rate_limit_max_lines:
+                    log.debug('sleeping to rate limit')
+                    time.sleep(self.rate_limit_sleep_time)  
 
             # to user is always a notice.
-            for nick, lines in response.private.iteritems():
-                for line in lines:
-                    self.connection.notice(nick, line)
+            for nick, all_lines in response.private.iteritems():
+                for lines in self._chunked(all_lines,
+                                           self.rate_limit_max_lines):
+                    for line in lines:
+                        self.connection.notice(nick, line)
+                       
+                    if len(lines) == self.rate_limit_max_lines:
+                        time.sleep(self.rate_limit_sleep_time)  
 
     # some sugar for sending msgs
     def _to_chan(self, event, msgs):
