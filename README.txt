@@ -33,6 +33,8 @@ You may want to run the bot in screen or tmux.
 History
 =======
 
+* 2013-09-06 - Version 1.0.5 - added rate limiting to bot output. should ease the bot-kicked-from-flooding problem.
+                             - added timestamps to game history listing
 * 2013-08-03 - Version 1.0.4 - Added support for showing all hints given by doing "!hints all". 
 * 2013-08-02 - Version 1.0.3 - End game with zero points when all storms flipped.
 * 2013-07-25 - Version 1.0.2 - Show game type in !last output. 

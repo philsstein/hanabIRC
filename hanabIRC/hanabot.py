@@ -45,8 +45,8 @@ class Hanabot(SingleServerIRCBot):
         # these should be in the config file so that different network
         # rate limiting polices can be specified. These defaults
         # are tuned to freenode.
-        self.rate_limit_max_lines = 20
-        self.rate_limit_sleep_time = 3
+        self.rate_limit_max_lines = 10
+        self.rate_limit_sleep_time = 2
 
         game_history.hist_file = hist_path
 
