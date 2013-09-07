@@ -57,7 +57,7 @@ class Hanabot(SingleServerIRCBot):
         # valid bot commands
         self.command_dict = {
             'Game Management': ['new', 'delete', 'join', 'start', 'stop',
-                                'leave', 'part', 'option'],
+                                'leave', 'part', 'option', 'watch'],
             'Hand Management': ['move', 'swap', 'sort'],
             'Game Action': ['play', 'hint', 'discard'],
             'Information': ['help', 'rules', 'turn', 'turns', 'game', 'hints',
@@ -387,6 +387,10 @@ class Hanabot(SingleServerIRCBot):
         for chan in self.channels.keys():
             self._display(self._game_state(str(chan)), event)
 
+    def handle_watch(self, args, event):
+        nick = event.source.nick
+        self._display(self.games[event.target].add_watcher(nick), event)
+
     def handle_stop(self, args, event):
         if not self._check_args(args, 0, [], event, 'stop'):
             return 
@@ -616,7 +620,7 @@ class Hanabot(SingleServerIRCBot):
         'join': '!join - join a game. If not game in channel, use !new to create one.', 
         'start': '!start [rainbow_5 | rainbow_10] - start a game. The game must have at least two players. If rainbow_5 is given, 5 rainbow cards will be added to the deck. If rainbow_10 is given, 10 rainbow cards will be added.',
         'stop': 'Immediately score a game, then stop/kill it.',
-        'leave': '!leave - leave a game. This is bad form.', 
+        'leave': '!leave - leave a game. If you are player, this is bad form. If you are watching the game (via !watch) you will no longer receive hand updates.', 
         'part': '!part - tell Hanabot to part the channel. Note: Hanbot will not leave its home channel.', 
         'move': '!move card - move a card in your hand and slide all other cards "right". "card" must be one of A, B, C, D, or E. "index" is where to put the card, counting from the left and must be an integer between 1 and max hand size.',
         'swap': '!swap card card - swap cards in your hand. Card arguments must be one of A, B, C, D, or E.',
@@ -635,6 +639,7 @@ class Hanabot(SingleServerIRCBot):
         'option': '!option [opt1 opt2 ... ] - If no arguments given, list current game options. Otherwise set the options given.', 
         'hands': '!hands - show hands of players. Your own hand will be shown with the "backs" facing you, identified individually by a letter. When a card is removed the letter is reused for the new card.',
         'table': '!game - show the state of the table', 
+        'watch': '!watch - join the game as a spectator. This means you get notices of hands after a move.',
         'discardpile': '!discardpile - show the current discard pile.',
         'grue': 'You are likely to be eaten.',
         'version': 'Show the version of the bot.',

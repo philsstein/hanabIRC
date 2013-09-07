@@ -189,6 +189,7 @@ class Game(object):
         '''
         self.colors = ['red', 'white', 'blue', 'green', 'yellow'] 
         self._players = defaultdict(str)
+        self._watchers = list()   # list of nicks
         # turn_order[0] is always current player's name
         self.turn_order = []
         self.max_players = 5
@@ -266,6 +267,10 @@ class Game(object):
             return 0
         else:
             return sum([len(cs) for cs in self.table.values()])
+
+    def watchers(self):
+        '''return a list of people watching the game.'''
+        return self._watchers()
 
     def players(self):
         '''return a list of player ids in the game.'''
@@ -615,7 +620,23 @@ class Game(object):
             for p in self._players:
                 ret.merge(self.get_hands(p))
 
+            for w in self._watchers:
+                ret.merge(self.get_hands(w))
+
         return ret
+
+    def add_watcher(self, nick):
+        if not self._playing:
+            return gr(private={nick:'There is no active game.'})
+        
+        retVal = gr()
+        if nick in self._watchers:
+            retVal.private[nick].append('You are already observing the game.')
+        else: 
+            self._watchers.append(nick)
+            retVal.public.append('%s is observing the game.' % nick)
+
+        return retVal
 
     def add_player(self, nick):
         if self._playing:
@@ -637,37 +658,44 @@ class Game(object):
         return retVal
 
     def remove_player(self, nick):
-        if not nick in self._players.keys():
-            return gr(private={nick: 'You are not in the game. You cannot be removed from a game you are not in.'})
+        '''remove players and watchers from the game.'''
+        if not nick in self._players.keys() + self._watchers:
+            return gr(private={nick: 'You are not in the game. You cannot be removed '
+                               'from a game you are not in.'})
 
         retVal = gr()
-        retVal.public.append('Removing %s from the game.' % nick)
+        role = 'a player' if nick in self._players else 'an observer'
+        retVal.public.append('Removing %s from the game as %s.' % (nick, role))
         retVal.private[nick].append('You\'ve been removed from the game.')
-        if self._players[nick].hand:
-            retVal.public.append('Putting %s\'s cards back in the deck and reshuffling.' % nick)
-            self.deck += self._players[nick].hand
-            random.shuffle(self.deck)
+        if nick in self._players:
+            if self._players[nick].hand:
+                retVal.public.append('Putting %s\'s cards back in the deck and reshuffling.' % nick)
+                self.deck += self._players[nick].hand
+                random.shuffle(self.deck)
 
-        del self._players[nick]
+            del self._players[nick]
 
-        if len(self._players) < 2:
-            retVal.public.append('Stopping the game as there are fewer than two people left in '
-                       'the game.')
-            self._playing = False
-            self._game_over = True
+            if len(self._players) < 2:
+                retVal.public.append('Stopping the game as there are fewer than two people left in '
+                           'the game.')
+                self._playing = False
+                self._game_over = True
 
-        elif len(self._players) < 4:
-            retVal.public.append('Now that there are fewer than four players, everyone gets '
-                       'another card. Adding card to each player\s hand.')
-            for p in self._players.values():
-                if len(self.deck):
-                    p.add_card(self.deck.pop(0), self.options['repeat_backs']['value'])
+            elif len(self._players) < 4:
+                retVal.public.append('Now that there are fewer than four players, everyone gets '
+                           'another card. Adding card to each player\s hand.')
+                for p in self._players.values():
+                    if len(self.deck):
+                        p.add_card(self.deck.pop(0), self.options['repeat_backs']['value'])
 
-        if self._playing:
-            if nick == self.turn_order[0]:
-                retVal.public.append('It is now %s\'s turn.' % self.turn_order[1])
+            if self._playing:
+                if nick == self.turn_order[0]:
+                    retVal.public.append('It is now %s\'s turn.' % self.turn_order[1])
        
-            del self.turn_order[0]
+                del self.turn_order[0]
+
+        if nick in self._watchers:
+            self._watchers.remove(nick)
 
         return retVal
 

@@ -27,11 +27,9 @@ class game_history(object):
 
         gr.private[nick].append('Results of the last %d games:' % n)
         for game in sorted(hist['last_games'][-n:]):
-            time_str = time.strftime("%a, %d %b %Y %H:%M:%S +0000",
-                                     time.gmtime(game[0]))
-            gr.private[nick].append('In %s - score: %d, type: %s, players: %s,'
-                                    ' time: %s' % (
-                game[4], int(game[1]), game[3], ', '.join(game[2]), time_str))
+            time_str = time.strftime("%y-%m-%d %H:%M", time.gmtime(game[0]))
+            gr.private[nick].append('At %s in %s - score: %d, type: %s, players: %s' % (
+                time_str, game[4], int(game[1]), game[3], ', '.join(game[2])))
 
         return gr
 
