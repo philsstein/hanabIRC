@@ -858,10 +858,7 @@ class Game(object):
     def _in_game_is_turn(self, nick, response):
         '''Return True if the player is in the game and is his/her turn
         else return False.'''
-        in_game = self._in_game(nick, response)
-        is_turn = self._is_turn(nick, response)
-
-        return in_game and is_turn
+        return self._in_game(nick, response) and self._is_turn(nick, response)
 
 if __name__ == "__main__":
     import doctest
