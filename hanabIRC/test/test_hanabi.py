@@ -124,11 +124,15 @@ class test_hanabi(unittest2.TestCase):
 
     def test_watch(self):
         self.setUpGame()
+        p1 = self.game.turn_order[0]
         print self.game.add_watcher('henry')
         self.assertTrue('henry' in self.game._watchers)
-        print self.game.discard_card(self.game.turn_order[0], 'A')
+        print self.game.discard_card(p1, 'A')
         print self.game.remove_player('henry')
         self.assertFalse('henry' in self.game._watchers)
+
+        print self.game.add_watcher(p1)
+        self.assertTrue(not p1 in self.game._watchers)
 
 if __name__ == '__main__':
     unittest2.main()

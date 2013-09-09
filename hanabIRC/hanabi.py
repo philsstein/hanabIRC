@@ -632,6 +632,10 @@ class Game(object):
         retVal = gr()
         if nick in self._watchers:
             retVal.private[nick].append('You are already observing the game.')
+        elif nick in self._players.keys():
+            retVal.private[nick].append('You are already in the game as a '
+                                        'player. You cannot also watch the '
+                                        'game!')
         else: 
             self._watchers.append(nick)
             retVal.public.append('%s is observing the game.' % nick)
@@ -648,6 +652,10 @@ class Game(object):
         else:
             if nick in self._players.keys():
                 retVal.private[nick].append('You are already in the game.')
+            elif nick in self._watchers:
+                retVal.private[nick].append('You cannot be both an observer and'
+                                            ' a player. Please !leave as oserver'
+                                            ' before joining the game.')
             else: 
                 self._players[nick] = Player(nick)
                 retVal.public.append('%s has joined the game.' % nick)

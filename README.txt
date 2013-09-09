@@ -33,6 +33,7 @@ You may want to run the bot in screen or tmux.
 History
 =======
 
+* 2013-09-09 - Version 1.0.7 - Do not allow someone to both watch and play the game!
 * 2013-09-07 - Version 1.0.6 - Reformat date in !last listing
                              - Added !watch command so people can observer the game (see the hands as they change)
                                 use !leave to leave the game as an observer.
