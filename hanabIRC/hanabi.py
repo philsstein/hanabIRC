@@ -809,7 +809,7 @@ class Game(object):
             else:
                 pub.append('Awesome Job!')
         elif 25 <= score <= 29:    # can happen with rainbow cards
-            pub.append('Unbelivable! Well done! The audience is amazed!')
+            pub.append('Unbelievable! Well done! The audience is amazed!')
         elif score == 30:
             pub.append('Well, aren\'t you all amazing? A perfect score! The audience\'s brains have melted under the onslaught of beauty!')
         else:
