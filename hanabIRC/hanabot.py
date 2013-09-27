@@ -621,7 +621,7 @@ class Hanabot(SingleServerIRCBot):
         'start': '!start [rainbow_5 | rainbow_10] - start a game. The game must have at least two players. If rainbow_5 is given, 5 rainbow cards will be added to the deck. If rainbow_10 is given, 10 rainbow cards will be added.',
         'stop': 'Immediately score a game, then stop/kill it.',
         'leave': '!leave - leave a game. If you are player, this is bad form. If you are watching the game (via !watch) you will no longer receive hand updates.', 
-        'part': '!part - tell Hanabot to part the channel. Note: Hanbot will not leave its home channel.', 
+        'part': '!part - tell Hanabot to part the channel. Note: Hanabot will not leave its home channel.', 
         'move': '!move card - move a card in your hand and slide all other cards "right". "card" must be one of A, B, C, D, or E. "index" is where to put the card, counting from the left and must be an integer between 1 and max hand size.',
         'swap': '!swap card card - swap cards in your hand. Card arguments must be one of A, B, C, D, or E.',
         'sort': '!sort - sort your cards into "correct" order, i.e. into ABCDE order from "mixed" state.', 
