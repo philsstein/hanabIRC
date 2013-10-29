@@ -162,14 +162,14 @@ class Hanabot(SingleServerIRCBot):
                 return ([], 'Giving a command would be more useful.')
 
             # op only commands - return after executing.
-            if cmds[0] in self.commands_admin:
-                log.debug('running admin cmd %s', cmds[0])
-                for chname, chobj in self.channels.items():
-                    if nick in chobj.opers():
-                        if cmds[0] == 'die':
-                            self.die('Seppuku Successful')
+            #if cmds[0] in self.commands_admin:
+            #    log.debug('running admin cmd %s', cmds[0])
+            #    for chname, chobj in self.channels.items():
+            #        if nick in chobj.opers():
+            #            if cmds[0] == 'die':
+            #                self.die('Seppuku Successful')
 
-                        return
+            #            return
 
             # valid user command check
             if not cmds[0] in self.commands:
@@ -484,6 +484,10 @@ class Hanabot(SingleServerIRCBot):
                 self._to_nick(event, msg)
                 return
 
+        chan = event.target
+        if not self.channels[chan].is_voiced(nick):
+            self._to_chan('/msg Chanserv voice #%s %s' % (chan, nick)
+
         self._display(self.games[event.target].add_player(nick), event)
 
     # GTL TODO: make sure this is called when the players leaves the channel?
@@ -494,6 +498,10 @@ class Hanabot(SingleServerIRCBot):
             return 
 
         nick = event.source.nick
+        chan = event.target
+        if self.channels[chan].is_voiced(nick):
+            self._to_chan('/msg Chanserv devoice #%s %s' % (chan, nick)
+
         # remove the player and display the result
         self._display(self.games[event.target].remove_player(nick), event)
 

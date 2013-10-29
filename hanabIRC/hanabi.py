@@ -516,7 +516,9 @@ class Game(object):
         else:
             # tell the next player it is their turn.
             retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
-
+            if not self.notes_up in self.notes:
+                retVal.private[self.turn_order[0]].append(' (Note: no hints '
+                                                          'remaining.)')
 
         return retVal
 
