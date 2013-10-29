@@ -693,7 +693,7 @@ class Game(object):
 
             elif len(self._players) < 4:
                 retVal.public.append('Now that there are fewer than four players, everyone gets '
-                           'another card. Adding card to each player\s hand.')
+                           'another card. Adding card to everyone\'s hand.')
                 for p in self._players.values():
                     if len(self.deck):
                         p.add_card(self.deck.pop(0), self.options['repeat_backs']['value'])

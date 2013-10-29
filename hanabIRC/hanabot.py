@@ -72,7 +72,7 @@ class Hanabot(SingleServerIRCBot):
 
         # these commands can execute without an active game.
         # otherwise the command handlers can assume an active game.
-        self.no_game_commands = ['new', 'help', 'rules', 'game', 'games', 'part',
+        self.no_game_commands = ['new', 'join', 'help', 'rules', 'game', 'games', 'part',
                                  'version', 'last']
 
         # games is a dict indexed by channel name, value is the Game object.
@@ -474,6 +474,11 @@ class Hanabot(SingleServerIRCBot):
         if not self._check_args(args, 0, [], event, 'join'):
             return 
 
+        # auto start new game if no active game in channel
+        chan = event.target
+        if not chan in self.games:
+            self.handle_new(args, event)
+
         nick = event.source.nick
         # enforce one game per player. Will not be needed if force users to 
         # send commands from the channel, so I can key the game to the channel.
@@ -484,11 +489,11 @@ class Hanabot(SingleServerIRCBot):
                 self._to_nick(event, msg)
                 return
 
-        chan = event.target
-        if not self.channels[chan].is_voiced(nick):
-            self._to_chan('/msg Chanserv voice #%s %s' % (chan, nick)
 
-        self._display(self.games[event.target].add_player(nick), event)
+        if not self.channels[chan].is_voiced(nick):
+            self.connection.privmsg('ChanServ', 'voice %s %s' % (chan, nick))
+
+        self._display(self.games[chan].add_player(nick), event)
 
     # GTL TODO: make sure this is called when the players leaves the channel?
     def handle_leave(self, args, event):
@@ -500,7 +505,7 @@ class Hanabot(SingleServerIRCBot):
         nick = event.source.nick
         chan = event.target
         if self.channels[chan].is_voiced(nick):
-            self._to_chan('/msg Chanserv devoice #%s %s' % (chan, nick)
+            self.connection.privmsg('ChanServ', 'devoice %s %s' % (chan, nick))
 
         # remove the player and display the result
         self._display(self.games[event.target].remove_player(nick), event)
