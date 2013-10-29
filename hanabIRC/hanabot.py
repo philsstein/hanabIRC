@@ -195,6 +195,10 @@ class Hanabot(SingleServerIRCBot):
                         g = self.games[event.target]
                         game_history.add_game(g.score(), g.players(),
                                               g.game_type(), event.target)
+                        for p in g.players():
+                            self.connection.privmsg('ChanServ', 'devoice %s %s'
+                                                    % (event.target, p))
+
                         del self.games[event.target] 
 
         except Exception, e:
@@ -504,8 +508,7 @@ class Hanabot(SingleServerIRCBot):
 
         nick = event.source.nick
         chan = event.target
-        if self.channels[chan].is_voiced(nick):
-            self.connection.privmsg('ChanServ', 'devoice %s %s' % (chan, nick))
+        self.connection.privmsg('ChanServ', 'devoice %s %s' % (chan, nick))
 
         # remove the player and display the result
         self._display(self.games[event.target].remove_player(nick), event)
