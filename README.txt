@@ -33,6 +33,7 @@ You may want to run the bot in screen or tmux.
 History
 =======
 
+* 2013-10-29 - Version 1.0.95 - Devoice on game end. Devoice on !leave always.
 * 2013-10-29 - Version 1.0.94 - !Join will start a new game if there is not one in the channel already. voice/devoice fixes.
 							     Disable !die command.
 * 2013-10-29 - Version 1.0.93 - Remove !die command. Voice players in game. Add note when thre are no hints remaining.
