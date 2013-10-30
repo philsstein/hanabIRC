@@ -193,7 +193,7 @@ class Hanabot(SingleServerIRCBot):
                 if event.target in self.games:
                     if self.games[event.target].game_over():
                         g = self.games[event.target]
-                        if len(g.players) > 1 and g.score() > 0: 
+                        if len(g.players()) > 1 and g.score() > 0: 
                             game_history.add_game(g.score(), g.players(),
                                                   g.game_type(), event.target)
 
