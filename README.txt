@@ -33,6 +33,8 @@ You may want to run the bot in screen or tmux.
 History
 =======
 
+* 2013-10-29 - Version 1.0.97 - Fixed, hopefully, the notice about no hints remaining. 
+* 2013-10-29 - Version 1.0.96 - Do not add obviously unplayed games to game history log.
 * 2013-10-29 - Version 1.0.95 - Devoice on game end. Devoice on !leave always.
 * 2013-10-29 - Version 1.0.94 - !Join will start a new game if there is not one in the channel already. voice/devoice fixes.
 							     Disable !die command.

@@ -244,7 +244,11 @@ class Game(object):
         if not self.turn_order:
             return gr('The game has yet to start. No turns yet.')
         else:
-            return gr('It is %s\'s turn to play.' % self.turn_order[0])
+            s = 'It is %s\'s turn to play.' % self.turn_order[0]
+            if not self.notes_up in self.notes:
+                s += ' (Note: no hints remaining.)'
+
+            return gr(s)
 
     def turns(self):
         '''Tell the players whos turn it is.'''
@@ -413,7 +417,11 @@ class Game(object):
             retVal.merge(self._end_game())
         else:
             # tell the next player it is their turn.
-            retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
+            s = 'It is your turn in Hanabi.'
+            if not self.notes_up in self.notes:
+                s += ' (Note: no hints remaining.)'
+
+            retVal.private[self.turn_order[0]].append(s)
 
         return retVal
 
@@ -515,10 +523,11 @@ class Game(object):
             retVal.merge(self._end_game())
         else:
             # tell the next player it is their turn.
-            retVal.private[self.turn_order[0]].append('It is your turn in Hanabi.')
+            s = 'It is your turn in Hanabi.'
             if not self.notes_up in self.notes:
-                retVal.private[self.turn_order[0]].append(' (Note: no hints '
-                                                          'remaining.)')
+                s += ' (Note: no hints remaining.)'
+
+            retVal.private[self.turn_order[0]].append(s)
 
         return retVal
 
