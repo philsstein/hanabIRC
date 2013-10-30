@@ -33,6 +33,7 @@ You may want to run the bot in screen or tmux.
 History
 =======
 
+* 2013-10-30 - Version 1.0.98 - Use mIRC black color for all color backgrounds. Easier for non-black-background clients.
 * 2013-10-29 - Version 1.0.97 - Fixed, hopefully, the notice about no hints remaining. 
 * 2013-10-29 - Version 1.0.96 - Do not add obviously unplayed games to game history log.
 * 2013-10-29 - Version 1.0.95 - Devoice on game end. Devoice on !leave always.

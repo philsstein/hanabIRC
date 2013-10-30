@@ -18,6 +18,7 @@ class text_markup_base(object):
     BLUE = 'blue'
     GREEN = 'green'
     YELLOW = 'yellow'
+    BLACK = 'black'
     RAINBOW = 'rainbow'    # special hanabi color, hacky.
 
     Colors = [RED, WHITE, BLUE, GREEN, YELLOW, RAINBOW]
@@ -96,11 +97,13 @@ class irc_markup(text_markup_base):
         text_markup_base.GREEN: 9,
         text_markup_base.RED: 4,
         text_markup_base.YELLOW: 8,
+        text_markup_base.BLACK: 1,
         text_markup_base.RAINBOW: 0
     }
 
     def __init__(self):
         text_markup_base.__init__(self)
+        self.bg_color = irc_markup._colormap[text_markup_base.BLACK]
 
     def markup(self, text, markup):
         text_markup_base.markup(self, text, markup)
@@ -120,7 +123,8 @@ class irc_markup(text_markup_base):
 
             return retVal
         else:
-            return '\x03%02d%s\x03' % (irc_markup._colormap[color], text)
+            return '\x03%02d,%02d%s\x03' % (irc_markup._colormap[color],
+                                            irc_markup._colormap[text_markup_base.BLACK], text)
 
 
 class xterm_markup(text_markup_base):
