@@ -93,7 +93,7 @@ class irc_markup(text_markup_base):
     # from mIRC color codes
     _colormap = {
         text_markup_base.WHITE: 0,
-        text_markup_base.BLUE: 12,
+        text_markup_base.BLUE: 11,
         text_markup_base.GREEN: 9,
         text_markup_base.RED: 4,
         text_markup_base.YELLOW: 8,
