@@ -482,10 +482,6 @@ class Hanabot(SingleServerIRCBot):
         chan = event.target
         nick = event.source.nick
 
-        # auto start new game if no active game in channel
-        # if not chan in self.games:
-        #     self.handle_new(args, event)
-
         # # enforce one game per player. Will not be needed if force users to 
         # # send commands from the channel, so I can key the game to the channel.
         # for chan, g in self.games.iteritems():
@@ -495,6 +491,10 @@ class Hanabot(SingleServerIRCBot):
         #         self._to_nick(event, msg)
         #         return
 
+        if not chan in self.games:
+            self._to_chan(event, 'There is no game started in %s, create one '
+                                 'with !new' % chan)
+            return
 
         if not self.channels[chan].is_voiced(nick):
             self.connection.privmsg('ChanServ', 'voice %s %s' % (chan, nick))
