@@ -180,7 +180,7 @@ class Hanabot(SingleServerIRCBot):
             # call the appropriate handle_* function.
             method = getattr(self, 'handle_%s' % cmds[0], None)
             if method:
-                if not cmds[0] in self.no_game_commands + 'xyzzy':
+                if not cmds[0] in self.no_game_commands + ['xyzzy']:
                     if not event.target in self.games:
                         msg = 'There is no active game in %s! Start one with !new.' % event.target
                         self._to_chan(event, msg)
@@ -352,6 +352,9 @@ class Hanabot(SingleServerIRCBot):
         
         if n < 0:
             self._to_nick(event, 'Why not just ask for the last sqrt(-1) games? Jeeze.')
+            return
+        elif n == 0:
+            self._to_nick(event, 'Nothing happens.')
             return
         elif n > 20:
             self._to_nick(event, 'Giving you the last 20 instead of the unreasonable '

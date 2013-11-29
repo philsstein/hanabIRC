@@ -32,7 +32,8 @@ You may want to run the bot in screen or tmux.
 
 History
 =======
-
+* 2013-11-29 - Version 1.1.0001 - Stop abuse of !last by Chank.
+* 2013-11-04 - Version 1.1.0 - Bold the Table line in addition to underline to make it stand out.
 * 2013-10-31 - Version 1.0.99 - Revert auto-join, was causing odd effects. Use light cyan for blue color. 
 * 2013-10-30 - Version 1.0.98 - Use mIRC black color for all color backgrounds. Easier for non-black-background clients.
 * 2013-10-29 - Version 1.0.97 - Fixed, hopefully, the notice about no hints remaining. 
