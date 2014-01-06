@@ -3,6 +3,7 @@ import yaml
 import time
 import os
 import logging
+import re
 
 log = logging.getLogger(__name__)
 
@@ -19,17 +20,37 @@ class game_history(object):
         game_history._put_hist(hist)
 
     @staticmethod
-    def last_games(nick, n=10):
+    def last_games(nick, n=10, search_string=None):
         gr = GameResponse()
         hist=game_history._get_hist()
         if not len(hist):
             return GameResponse(retVal=False)
+        
+        if not search_string:
+            gr.private[nick].append('Results of the last %d games:' % n)
+        else:
+            pattern = re.compile(search_string)
+            gr.private[nick].append('Results of the last %d games filtered by '
+                                    '%s:' % (n, search_string))
 
-        gr.private[nick].append('Results of the last %d games:' % n)
-        for game in sorted(hist['last_games'][-n:]):
+        count = 0
+        # extended slice syntax reverses list
+        for game in sorted(hist['last_games'][::-1]): 
             time_str = time.strftime("%y-%m-%d %H:%M", time.gmtime(game[0]))
-            gr.private[nick].append('At %s in %s - score: %d, type: %s, players: %s' % (
-                time_str, game[4], int(game[1]), game[3], ', '.join(game[2])))
+            game_str = 'At %s in %s - score: %d, type: %s, players: %s' % (
+                time_str, game[4], int(game[1]), game[3], ', '.join(game[2]))
+
+            if not search_string:
+                gr.private[nick].append(game_str)
+                count += 1
+            else:
+                m = pattern.search(game_str)
+                if m:
+                    gr.private[nick].append(game_str)
+                    count += 1
+
+            if count > n-1:
+                break
 
         return gr
 

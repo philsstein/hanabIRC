@@ -343,11 +343,24 @@ class Hanabot(SingleServerIRCBot):
     def handle_last(self, args, event):
         if not len(args):
             n = 10
+            search_str = None
         else:
-            if self._check_args(args, 1, [int], event, 'last'):
-                n = args[0]
+            if len(args) == 1 or len(args) == 2:
+                try:
+                    n = int(args[0])
+                    if len(args) == 2:
+                        search_str = str(args[1])
+                    else:
+                        search_str = None
+                except ValueError:
+                    self._to_nick(event, 'Wrong type for argument in !last command.')
+                    self.handle_help(['last'], event)
+                    return
             else:
+                self._to_nick(event, "Wrong number of arguments to !last.")
+                self.handle_help(['last'], event)
                 return
+
         nick = event.source.nick
         
         if n < 0:
@@ -361,7 +374,7 @@ class Hanabot(SingleServerIRCBot):
                           'number you asked for.')
             n = 20
 
-        self._display(game_history.last_games(nick, n), event)
+        self._display(game_history.last_games(nick, n, search_str), event)
 
     def handle_game(self, args, event):
         log.debug('got game event. args: %s', args)
@@ -640,7 +653,7 @@ class Hanabot(SingleServerIRCBot):
         'game': '!game - show the game state for current channel.', 
         'games': '!games - show game states for all channels hanabot has joined.',
         'hints': '!hints [all] - show the hints given in the current game. If "all" is given, show all hints otherwise show only hints given to you.',
-        'last': '!last [n] - Show the results of the last N games. If n not given, then show results for the last 10 games.',
+        'last': '!last [n [filter]] - Show the results of the last N games. If n not given, then show results for the last 10 games. If [filter] is given, filter the list by the string given.',
         'option': '!option [opt1 opt2 ... ] - If no arguments given, list current game options. Otherwise set the options given.', 
         'hands': '!hands - show hands of players. Your own hand will be shown with the "backs" facing you, identified individually by a letter. When a card is removed the letter is reused for the new card.',
         'table': '!game - show the state of the table', 
