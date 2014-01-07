@@ -345,11 +345,11 @@ class Hanabot(SingleServerIRCBot):
             n = 10
             search_str = None
         else:
-            if len(args) == 1 or len(args) == 2:
+            if len(args) >= 1:
                 try:
                     n = int(args[0])
-                    if len(args) == 2:
-                        search_str = str(args[1])
+                    if len(args) >= 2:
+                        search_str = str(' '.join(args[1:]))
                     else:
                         search_str = None
                 except ValueError:

@@ -32,6 +32,8 @@ You may want to run the bot in screen or tmux.
 
 History
 =======
+* 2014-01-07 - Version 1.1.03 - bugfix for new !last syntax.
+* 2014-01-06 - Version 1.1.02 - added optional 3rd arg to !last, a pattern. If given only display game strings that contain that pattern.
 * 2013-11-29 - Version 1.1.0001 - Stop abuse of !last by Chank.
 * 2013-11-04 - Version 1.1.0 - Bold the Table line in addition to underline to make it stand out.
 * 2013-10-31 - Version 1.0.99 - Revert auto-join, was causing odd effects. Use light cyan for blue color. 

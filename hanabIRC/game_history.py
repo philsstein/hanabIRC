@@ -35,7 +35,7 @@ class game_history(object):
 
         count = 0
         # extended slice syntax reverses list
-        for game in sorted(hist['last_games'][::-1]): 
+        for game in sorted(hist['last_games'])[::-1]: 
             time_str = time.strftime("%y-%m-%d %H:%M", time.gmtime(game[0]))
             game_str = 'At %s in %s - score: %d, type: %s, players: %s' % (
                 time_str, game[4], int(game[1]), game[3], ', '.join(game[2]))
