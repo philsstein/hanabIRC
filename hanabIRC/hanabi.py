@@ -567,7 +567,7 @@ class Game(object):
     def get_hands(self, nick):
         retVal = gr()
         hands = []
-        for p in sorted(self._players.keys()):
+        for p in self.turn_order:
             if self._players[p].name != nick:
                 hands.append(self._players[p].get_hand())
             else:
