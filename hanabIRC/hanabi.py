@@ -250,6 +250,8 @@ class Game(object):
                 self.turn_order[i] = new_nick
                 break
 
+        return True
+
     def turn(self):
         '''Tell the players whos turn it is.'''
         if not self.turn_order:

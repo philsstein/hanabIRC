@@ -150,9 +150,10 @@ class Hanabot(SingleServerIRCBot):
         after = event.target
         for chan, game in self.games.iteritems():
             if game.in_game(before):
-                game.replace_player(before, after)
-                self._to_chan(event, 'Replaced %s with %s in game in %s' % (
-                    before, after, chan))
+                if game.replace_player(before, after):
+                    self.connection.notice(chan,
+                                           'Replaced %s with %s in game in %s' % (
+                                               before, after, chan))
 
     def parse_commands(self, event, cmds):
         try:
