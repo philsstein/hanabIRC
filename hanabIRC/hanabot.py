@@ -145,6 +145,15 @@ class Hanabot(SingleServerIRCBot):
         except Exception, e:
             log.critical('Got exception when handling message: %s' % e)
 
+    def on_nick(self, conn, event):
+        before = event.source.nick
+        after = event.target
+        for chan, game in self.games.iteritems():
+            if game.in_game(before):
+                game.replace_player(before, after)
+                self._to_chan(event, 'Replaced %s with %s in game in %s' % (
+                    before, after, chan))
+
     def parse_commands(self, event, cmds):
         try:
             log.debug('got command. %s --> %s : %s',

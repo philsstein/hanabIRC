@@ -32,6 +32,7 @@ You may want to run the bot in screen or tmux.
 
 History
 =======
+* 2014-03-04 - Version 1.2 - hanbot tracks nicks in the game and replaces them as needed. 
 * 2014-02-11 - Version 1.1.04 - Sort !hands in player turn order instead of alphabetically. 
 * 2014-01-07 - Version 1.1.03 - bugfix for new !last syntax.
 * 2014-01-06 - Version 1.1.02 - added optional 3rd arg to !last, a pattern. If given only display game strings that contain that pattern.

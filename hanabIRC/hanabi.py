@@ -239,6 +239,17 @@ class Game(object):
         '''REturn the nick of the player whose turn it is.'''
         return self.turn_order[0]
 
+    def replace_player(self, old_nick, new_nick):
+        if not self.in_game(old_nick):
+            return False
+
+        self._players[new_nick] = self._players.pop(old_nick)
+        self._players[new_nick].name = new_nick
+        for i in xrange(len(self.turn_order)):
+            if self.turn_order[i] == old_nick:
+                self.turn_order[i] = new_nick
+                break
+
     def turn(self):
         '''Tell the players whos turn it is.'''
         if not self.turn_order:
