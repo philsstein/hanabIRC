@@ -134,6 +134,31 @@ class test_hanabi(unittest2.TestCase):
         print self.game.add_watcher(p1)
         self.assertTrue(not p1 in self.game._watchers)
 
+    def test_unsolvable_rainbow_5(self):
+        game = Game()
+        game.markup = xterm_markup()
+        for p in players:
+            game.add_player(p)
+
+        for c in game.deck:
+            c.markup = xterm_markup()
+
+        opts = {'rainbow_5': True}
+        game.options['solvable_rainbow_5'] = True
+        bad_card = Card('rainbow', 1)
+        bad_card.markup = xterm_markup()
+        game.deck[len(game.deck)-1] = bad_card
+        
+        last_card = game.deck[len(game.deck)-1]
+        print '\nlast card before: %s' % last_card
+
+        game.start_game(players[0], opts)
+        
+        last_card = game.deck[len(game.deck)-1]
+        print 'last card after: %s' % last_card
+        self.assertFalse(last_card.color == 'rainbow' and 
+                         last_card.number in [1,2,3,4])
+
 if __name__ == '__main__':
     unittest2.main()
 

@@ -199,7 +199,10 @@ class Game(object):
 
         self.options = {
             'repeat_backs': { 'value': False, 'help': 'Toggle between using '
-                             'A-E and A-Z for card backs.' }
+                             'A-E and A-Z for card backs.' },
+            'solvable_rainbow_5': {'value': True, 'help': 'If True, do not '
+                                   'allow the rainbow 1, 2, 3, or 4 to be on '
+                                   'the bottom of the deck.'}
         }
 
         self.notes_up, self.notes_down = ('w', 'b')
@@ -767,6 +770,15 @@ class Game(object):
                         self.deck += [Card('rainbow', i) for i in self.card_distribution]
 
                     random.shuffle(self.deck)
+                
+                    if self.options['solvable_rainbow_5'] and self._game_type == 'rainbow 5':
+                        bad_cards = [Card('rainbow', i) for i in xrange(1,5)]
+                        while self.deck[len(self.deck)-1] in bad_cards:
+                            log.debug('reshuffling as last card is %s' %
+                                      str(self.deck[len(self.deck)-1]))
+                            log.debug('...and solvable_rainbow_5 is toggled to True')
+                            random.shuffle(self.deck)
+
                 else:
                     retVal.public.append('Invalid option to start command: %s' % opt)
                     retVal.public.append('Game not started.')
