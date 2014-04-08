@@ -405,7 +405,7 @@ class Game(object):
                        (nick, str(c), c.color))
             if len(self.table[c.color]) == 5:
                 retVal.public.append('Bonus for finishing %s group: one note token '
-                           'flipped up!' % c.color)
+                           'recovered!' % c.color)
                 self._flip(self.notes, self.notes_down, self.notes_up)
         else:
             retVal.public.append('%s guessed wrong with %s! One storm token '
