@@ -32,6 +32,7 @@ You may want to run the bot in screen or tmux.
 
 History
 =======
+* 2014-04-06 - Version 1.2.03 - Give a wanring when playing with solvable_rainbow_5 option as the shuffle may be stacked. 
 * 2014-04-06 - Version 1.2.02 - Minor phrasing change. Added 'solvable_rainbow_5' option. If True, do not let bottom of deck be a rainbow 1, 2, 3, or 4 when playing a rainbow_5 game.
 * 2014-03-04 - Version 1.2.01 - use notice to chan when replacing nicks in an active game. 
 * 2014-03-04 - Version 1.2 - hanbot tracks nicks in the game and replaces them as needed. 

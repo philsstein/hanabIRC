@@ -772,6 +772,13 @@ class Game(object):
                     random.shuffle(self.deck)
                 
                     if self.options['solvable_rainbow_5'] and self._game_type == 'rainbow 5':
+                        retVal.public.append('Warning: the solvable rainbow 5 option is set. '
+                                             'This means that the deck is stacked a bit: hanabot'
+                                             ' ensures that there is no rainbow 1, 2, 3, or 4 '
+                                             'card on the bottom of the deck. If you\'d like '
+                                             ' a "natural" shuffle, do "!option '
+                                             'solvable_rainbow_5" and !delete, then restart the '
+                                             'game.')
                         bad_cards = [Card('rainbow', i) for i in xrange(1,5)]
                         while self.deck[len(self.deck)-1] in bad_cards:
                             log.debug('reshuffling as last card is %s' %
