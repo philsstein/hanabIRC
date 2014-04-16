@@ -779,12 +779,13 @@ class Game(object):
                                              ' a "natural" shuffle, do "!option '
                                              'solvable_rainbow_5" and !delete, then restart the '
                                              'game.')
-                        bad_cards = [Card('rainbow', i) for i in xrange(1,5)]
-                        while self.deck[len(self.deck)-1] in bad_cards:
+                        last_card = self.deck[len(self.deck)-1]
+                        while last_card.color == 'rainbow' and last_card.number != 5:
                             log.debug('reshuffling as last card is %s' %
                                       str(self.deck[len(self.deck)-1]))
                             log.debug('...and solvable_rainbow_5 is toggled to True')
                             random.shuffle(self.deck)
+                            last_card = self.deck[len(self.deck)-1]
 
                 else:
                     retVal.public.append('Invalid option to start command: %s' % opt)
