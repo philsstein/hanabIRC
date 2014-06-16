@@ -607,6 +607,9 @@ class Hanabot(SingleServerIRCBot):
         if not self._check_args(args, 0, [], event, 'delete'):
             return 
 
+        for p in self.games[event.target].players():
+            self.connection.privmsg('ChanServ', 'devoice %s %s' % (event.target, p))
+
         del self.games[event.target]
         self._to_chan(event, '%s deleted game.' % event.source.nick)
 
